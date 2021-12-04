@@ -188,7 +188,7 @@ def main():  # todo refactor parameters
     num_epochs = 30
     # batch_size = 128
     grad_clip = 2.0
-    gcn_embedding_size = 512  # хз, что где
+    gcn_embedding_size = 512
     image_embedding_dim = 512
     # data_name = 'precomp'
     caption_encoder_num_layers = 1
@@ -211,7 +211,6 @@ def main():  # todo refactor parameters
     measure = 'cosine'
     max_violation = False
     learning_rate = 0.0002
-    use_abs = False
     lr_update = 15
     log_step = 10
 
