@@ -30,6 +30,7 @@ class VSRN(object):
                  vocab_size,
                  word_dim,
                  caption_encoder_num_layers,
+                 caption_encoder_embedding_size,
                  use_abs,  # todo мб выпилить
                  dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
                  dim_caption_generation_hidden,
@@ -63,7 +64,7 @@ class VSRN(object):
 
         self.txt_enc = EncoderText(vocab_size=vocab_size,
                                    word_dim=word_dim,
-                                   embed_size=gcn_embedding_size,
+                                   embed_size=caption_encoder_embedding_size,
                                    num_layers=caption_encoder_num_layers,
                                    use_abs=use_abs)
         if torch.cuda.is_available():

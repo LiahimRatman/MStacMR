@@ -151,7 +151,6 @@ def main():  # todo refactor parameters
 
     # Load Vocabulary Wrapper  # todo make new vocab
     vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
-    vocab_size = len(vocab)
 
     # Get data loaders
     # train_loader, val_loader = data.get_loaders(opt.data_path, opt.data_name, vocab, opt.crop_size, opt.batch_size,
@@ -165,7 +164,7 @@ def main():  # todo refactor parameters
         vocab=vocab
     )  # todo придумать параметры
 
-    opt = None
+    # opt = None
     val_loader = None
     # Construct the model
     # Namespace(batch_size=128, bidirectional=0, cnn_type='vgg19', crop_size=224, data_name='precomp',
@@ -179,14 +178,15 @@ def main():  # todo refactor parameters
     # parameters
     # todo Сделать после того как переделаю энкодеры
     num_epochs = 30
-    batch_size = 128
+    # batch_size = 128
     grad_clip = 2.0
     gcn_embedding_size = 512  # хз, что где
     image_embedding_dim = 512
-    data_name = 'precomp'
+    # data_name = 'precomp'
     caption_encoder_num_layers = 1
     vocab_size = len(vocab)
     caption_encoder_word_dim = 300  # caption embedding size
+    caption_encoder_embedding_size = 512
     dim_vid = 512  # было 2048, подозреваю, что это много
     dim_caption_generation_hidden = 512  # мб теперь надо поменять
     input_dropout_p_caption_generation_enc = 0.2
@@ -214,6 +214,7 @@ def main():  # todo refactor parameters
                  vocab_size,
                  caption_encoder_word_dim,
                  caption_encoder_num_layers,
+                 caption_encoder_embedding_size,
                  use_abs,  # todo мб выпилить
                  dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
                  dim_caption_generation_hidden,
