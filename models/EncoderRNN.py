@@ -2,10 +2,15 @@ import torch.nn as nn
 
 
 class EncoderRNN(nn.Module):
-    def __init__(self, dim_vid, dim_hidden, input_dropout_p=0.2, rnn_dropout_p=0.5,
-                 n_layers=1, bidirectional=False, rnn_cell='gru'):
+    def __init__(self,
+                 dim_vid,
+                 dim_hidden,
+                 input_dropout_p=0.2,
+                 rnn_dropout_p=0.5,
+                 n_layers=1,
+                 bidirectional=False,
+                 rnn_cell='gru'):
         """
-
         Args:
             hidden_dim (int): dim of hidden state of rnn
             input_dropout_p (int): dropout probability for the input sequence
@@ -30,8 +35,13 @@ class EncoderRNN(nn.Module):
         elif rnn_cell.lower() == 'gru':
             self.rnn_cell = nn.GRU
 
-        self.rnn = self.rnn_cell(dim_hidden, dim_hidden, n_layers, bias=False, batch_first=True,
-                                bidirectional=bidirectional, dropout=self.rnn_dropout_p)
+        self.rnn = self.rnn_cell(dim_hidden,
+                                 dim_hidden,
+                                 n_layers,
+                                 bias=False,
+                                 batch_first=True,
+                                 bidirectional=bidirectional,
+                                 dropout=self.rnn_dropout_p)
 
         self._init_hidden()
 
