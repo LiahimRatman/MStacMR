@@ -25,18 +25,14 @@ def validate(log_step,
              val_loader,
              model):
     # compute the encoding for all the validation images and captions
-    img_embs, cap_embs = encode_data(
-        model, val_loader, log_step, logging.info)
+    img_embs, cap_embs = encode_data(model, val_loader, log_step)
 
     # caption retrieval
     (r1, r5, r10, medr, meanr) = i2t(img_embs, cap_embs, measure=measure)
-    print("Image to text: %.1f, %.1f, %.1f, %.1f, %.1f" %
-                 (r1, r5, r10, medr, meanr))
+    print("Image to text: %.1f, %.1f, %.1f, %.1f, %.1f" % (r1, r5, r10, medr, meanr))
     # image retrieval
-    (r1i, r5i, r10i, medri, meanr) = t2i(
-        img_embs, cap_embs, measure=measure)
-    print("Text to image: %.1f, %.1f, %.1f, %.1f, %.1f" %
-                 (r1i, r5i, r10i, medri, meanr))
+    (r1i, r5i, r10i, medri, meanr) = t2i(img_embs, cap_embs, measure=measure)
+    print("Text to image: %.1f, %.1f, %.1f, %.1f, %.1f" % (r1i, r5i, r10i, medri, meanr))
     # sum of recalls to be used for early stopping
     currscore = r1 + r5 + r1i + r5i
 

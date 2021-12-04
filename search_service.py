@@ -130,7 +130,7 @@ def t2i(images, captions, npts=None, measure='cosine', return_ranks=False):
         return (r1, r5, r10, medr, meanr)
 
 
-def encode_data(model, data_loader, log_step=10, logging=print):
+def encode_data(model, data_loader, log_step=10):
     """Encode all images and captions loadable by `data_loader`
     """
     # batch_time = AverageMeter()
