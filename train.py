@@ -162,10 +162,18 @@ def main():  # todo refactor parameters
         ocr_embeddings_name='precomputed_embeddings/final_all_train_emb_CLIP_fp16.npy',
         images_path='',
         vocab=vocab
-    )  # todo придумать параметры
+    )
+    val_loader = get_dataloader(
+        type='eval',
+        annotations_map_name='checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json',
+        image_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fp16.npy',
+        ocr_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fp16.npy',
+        images_path='',
+        vocab=vocab
+    )
 
     # opt = None
-    val_loader = None
+    # val_loader = None
     # Construct the model
     # Namespace(batch_size=128, bidirectional=0, cnn_type='vgg19', crop_size=224, data_name='precomp',
     #           data_path='data_big', dim_hidden=512, dim_vid=2048, dim_word=300, embed_size=2048, finetune=False,
@@ -242,28 +250,30 @@ def main():  # todo refactor parameters
                              epoch)
 
         # train for one epoch
-        best_rsum = train(train_loader, model, epoch, val_loader, best_rsum)
+        best_rsum = train(train_loader, model, epoch, val_loader, log_step, measure, best_rsum)
         print(best_rsum)
-        raise ValueError
+        # raise ValueError
         # evaluate on validation set
         rsum = validate(log_step,
                         measure,
                         val_loader,
                         model)  # todo подумать как реализовать разделение на вал сет. Пока не трогаю
-
+        print(best_rsum)
         # remember best R@ sum and save checkpoint
-        is_best = rsum > best_rsum
+        is_best = rsum > best_rsum  # todo Что-то тут странно, чувствую, есть косяк
         best_rsum = max(rsum, best_rsum)
         save_checkpoint({
             'epoch': epoch + 1,
             'model': model.state_dict(),
             'best_rsum': best_rsum,
-            'opt': opt,
+            # 'opt': opt,
             # 'Eiters': model.Eiters,
-        }, is_best, prefix=opt.logger_name + '/')
+        },
+            is_best,
+            prefix='runs/log/')
 
 
-def train(train_loader, model, epoch, val_loader, best_rsum):  # todo add time tracking
+def train(train_loader, model, epoch, val_loader, log_step, measure, best_rsum):  # todo add time tracking
     # switch to train mode
     model.train_start()
     for i, train_data in enumerate(train_loader):
@@ -299,22 +309,27 @@ def train(train_loader, model, epoch, val_loader, best_rsum):  # todo add time t
         #             data_time=data_time, e_log=str(model.logger)))
 
         # # validate at every val_step
-        # if model.Eiters % opt.val_step == 0:
-        #     # validate(opt, val_loader, model)
-        #
-        #     # evaluate on validation set
-        #     rsum = validate(opt, val_loader, model)
-        #
-        #     # remember best R@ sum and save checkpoint
-        #     is_best = rsum > best_rsum
-        #     best_rsum = max(rsum, best_rsum)
-        #     save_checkpoint({
-        #         'epoch': epoch + 1,
-        #         'model': model.state_dict(),
-        #         'best_rsum': best_rsum,
-        #         'opt': opt,
-        #         'Eiters': model.Eiters,
-        #     }, is_best, prefix=opt.logger_name + '/')
+        if i % 100 == 0:
+            # validate(opt, val_loader, model)
+
+            # evaluate on validation set
+            rsum = validate(log_step,
+                            measure,
+                            val_loader,
+                            model)
+
+            # remember best R@ sum and save checkpoint
+            is_best = rsum > best_rsum
+            best_rsum = max(rsum, best_rsum)
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'model': model.state_dict(),
+                'best_rsum': best_rsum,
+                # 'opt': opt,
+                # 'Eiters': model.Eiters,
+            },
+                is_best,
+                prefix='runs/log/')
 
     return best_rsum
 
