@@ -3,22 +3,13 @@ import torch.backends.cudnn as cudnn
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from torch.autograd import Variable
 
-import train_utils as utils
-
 from ContrastiveLoss import ContrastiveLoss
-from models import DecoderRNN, EncoderRNN, S2VTAttModel
 from EncoderImage import EncoderImage
 from EncoderText import EncoderText
+from models import DecoderRNN, EncoderRNN, S2VTAttModel
+import train_utils as utils
 
-# Namespace(batch_size=128, bidirectional=0, cnn_type='vgg19', crop_size=224, data_name='precomp',
-#           data_path='data_big', dim_hidden=512, dim_vid=2048, dim_word=300, embed_size=2048, finetune=False,
-#           grad_clip=2.0,
-#           img_dim=2048, input_dropout_p=0.2, learning_rate=0.0002, log_step=10,
-#           lr_update=15, margin=0.2, max_len=60, max_violation=False, measure='cosine', no_imgnorm=False,
-#           num_epochs=30, num_layers=1, reset_train=False, resume='', rnn_dropout_p=0.5, rnn_type='gru',
-#           text_dim=300, text_number=15, use_abs=False, use_restval=False, val_step=500, vocab_path='./vocab/',
-#           word_dim=300, workers=10, logger_name='runs/runX')
-# todo Вот тут много работы
+
 class VSRN(object):
     """
     rkiros/uvs model
@@ -31,7 +22,6 @@ class VSRN(object):
                  word_dim,
                  caption_encoder_num_layers,
                  caption_encoder_embedding_size,
-                 use_abs,  # todo мб выпилить
                  dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
                  dim_caption_generation_hidden,
                  input_dropout_p_caption_generation_enc,
@@ -65,13 +55,11 @@ class VSRN(object):
         self.txt_enc = EncoderText(vocab_size=vocab_size,
                                    word_dim=word_dim,
                                    embed_size=caption_encoder_embedding_size,
-                                   num_layers=caption_encoder_num_layers,
-                                   use_abs=use_abs)
+                                   num_layers=caption_encoder_num_layers)
         if torch.cuda.is_available():
             self.img_enc.cuda()
             self.txt_enc.cuda()
-            cudnn.benchmark = True  # todo check what it is and remove
-
+            cudnn.benchmark = True  # todo check what it is and remove. Upd: is used for rntime parameters optimization in case of gru architecture
 
         #   captioning elements
         self.encoder = EncoderRNN(

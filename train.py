@@ -215,7 +215,6 @@ def main():  # todo refactor parameters
                  caption_encoder_word_dim,
                  caption_encoder_num_layers,
                  caption_encoder_embedding_size,
-                 use_abs,  # todo мб выпилить
                  dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
                  dim_caption_generation_hidden,
                  input_dropout_p_caption_generation_enc,
