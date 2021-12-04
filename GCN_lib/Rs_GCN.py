@@ -1,11 +1,8 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
-
 
 
 class Rs_GCN(nn.Module):
-
     def __init__(self, in_channels, inter_channels, bn_layer=True):
         super(Rs_GCN, self).__init__()
 
@@ -17,45 +14,54 @@ class Rs_GCN(nn.Module):
             if self.inter_channels == 0:
                 self.inter_channels = 1
 
-
         conv_nd = nn.Conv1d
-        max_pool = nn.MaxPool1d
         bn = nn.BatchNorm1d
 
-        self.g = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-                         kernel_size=1, stride=1, padding=0)
+        self.g = conv_nd(in_channels=self.in_channels,
+                         out_channels=self.inter_channels,
+                         kernel_size=1,
+                         stride=1,
+                         padding=0)
 
         if bn_layer:
             self.W = nn.Sequential(
-                conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-                        kernel_size=1, stride=1, padding=0),
+                conv_nd(in_channels=self.inter_channels,
+                        out_channels=self.in_channels,
+                        kernel_size=1,
+                        stride=1,
+                        padding=0),
                 bn(self.in_channels)
             )
             nn.init.constant(self.W[1].weight, 0)
             nn.init.constant(self.W[1].bias, 0)
         else:
-            self.W = conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
-                             kernel_size=1, stride=1, padding=0)
+            self.W = conv_nd(in_channels=self.inter_channels,
+                             out_channels=self.in_channels,
+                             kernel_size=1,
+                             stride=1,
+                             padding=0)
             nn.init.constant(self.W.weight, 0)
             nn.init.constant(self.W.bias, 0)
 
         self.theta = None
         self.phi = None
 
-
-        self.theta = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-                             kernel_size=1, stride=1, padding=0)
-        self.phi = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
-                           kernel_size=1, stride=1, padding=0)
-
-
-
+        self.theta = conv_nd(in_channels=self.in_channels,
+                             out_channels=self.inter_channels,
+                             kernel_size=1,
+                             stride=1,
+                             padding=0)
+        self.phi = conv_nd(in_channels=self.in_channels,
+                           out_channels=self.inter_channels,
+                           kernel_size=1,
+                           stride=1,
+                           padding=0)
 
     def forward(self, v):
-        '''
+        """
         :param v: (B, D, N)
         :return:
-        '''
+        """
         batch_size = v.size(0)
 
         g_v = self.g(v).view(batch_size, self.inter_channels, -1)
@@ -75,11 +81,3 @@ class Rs_GCN(nn.Module):
         v_star = W_y + v
 
         return v_star
-
-
-
-
-
-
-
-

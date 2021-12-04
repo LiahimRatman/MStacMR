@@ -150,7 +150,7 @@ def encode_data(model, data_loader, log_step=10):
         # model.logger = val_logger
 
         # compute the embeddings
-        img_emb, cap_emb, GCN_img_emd = model.forward_emb(images, captions, lengths, scene_text, volatile=True)
+        img_emb, cap_emb, GCN_img_emd = model.forward_emb(images, captions, lengths, scene_text)
 
         # initialize the numpy arrays given the size of the embeddings
         if img_embs is None:

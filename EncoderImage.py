@@ -36,10 +36,10 @@ def EncoderImage(use_precomputed,
                 img_dim, embed_size, data_name, text_number, text_dim, use_abs, no_imgnorm)
         else:
             img_enc = EncoderImagePrecomp(
-                img_dim, embed_size, use_abs, no_imgnorm)
+                img_dim, embed_size, use_abs, no_imgnorm)  # todo выпилить
     else:
         img_enc = EncoderImageFull(
-            embed_size, finetune, cnn_type, use_abs, no_imgnorm)
+            embed_size, finetune, cnn_type, use_abs, no_imgnorm)  # todo переделать
 
     return img_enc
 
@@ -283,7 +283,9 @@ class EncoderImagePrecompAttn(nn.Module):
 
         # FINAL AGGREGATION
         # fc_scene_text = torch.mean(fc_scene_text, dim=1)
-        features = torch.mul(visual_features, fc_scene_text) + visual_features
+
+        # features = torch.mul(visual_features, fc_scene_text) + visual_features  # todo return
+        features = visual_features
 
         # features = torch.mean(GCN_img_emd, dim=1)
 
