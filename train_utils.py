@@ -2,10 +2,13 @@ import torch
 import torch.nn as nn
 
 
-def adjust_learning_rate(opt, optimizer, epoch):
+def adjust_learning_rate(learning_rate,
+                         lr_update,
+                         optimizer,
+                         epoch):
     """Sets the learning rate to the initial LR
        decayed by 10 every 30 epochs"""
-    lr = opt.learning_rate * (0.1 ** (epoch // opt.lr_update))
+    lr = learning_rate * (0.1 ** (epoch // lr_update))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 

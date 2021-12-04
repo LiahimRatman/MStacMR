@@ -3,88 +3,108 @@ import torch.backends.cudnn as cudnn
 from torch.nn.utils.clip_grad import clip_grad_norm_
 from torch.autograd import Variable
 
-import train_utils as utils
-
 from ContrastiveLoss import ContrastiveLoss
-from models import DecoderRNN, EncoderRNN, S2VTAttModel
 from EncoderImage import EncoderImage
 from EncoderText import EncoderText
+from models import DecoderRNN, EncoderRNN, S2VTAttModel
+import train_utils as utils
 
 
-# todo Вот тут много работы
 class VSRN(object):
     """
     rkiros/uvs model
     """
-    def __init__(self, opt):
+    def __init__(self,
+                 grad_clip,
+                 image_embedding_dim,
+                 gcn_embedding_size,
+                 vocab_size,
+                 word_dim,
+                 caption_encoder_num_layers,
+                 caption_encoder_embedding_size,
+                 dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
+                 dim_caption_generation_hidden,
+                 input_dropout_p_caption_generation_enc,
+                 rnn_type_caption_generation_enc,
+                 rnn_dropout_p_caption_generation_enc,
+                 bidirectional_enc,
+                 max_caption_len,
+                 dim_word_caption_generation,
+                 input_dropout_p_caption_generation_dec,
+                 rnn_type_caption_generation_dec,
+                 rnn_dropout_p_caption_generation_dec,
+                 bidirectional_dec,
+                 margin,
+                 measure,
+                 max_violation,
+                 learning_rate):
         # tutorials/09 - Image Captioning
         # Build Models
-        self.grad_clip = opt.grad_clip
+        self.grad_clip = grad_clip
         self.img_enc = EncoderImage(use_precomputed=True,
-                                    data_name=opt.data_name,
-                                    img_dim=opt.img_dim,
-                                    embed_size=opt.embed_size,
-                                    finetune=opt.finetune,
-                                    cnn_type=opt.cnn_type,
-                                    text_number=opt.text_number,
-                                    text_dim=opt.text_dim,
-                                    use_abs=opt.use_abs,
-                                    no_imgnorm=opt.no_imgnorm)
+                                    data_name='',
+                                    img_dim=image_embedding_dim,
+                                    embed_size=gcn_embedding_size)#,
+                                    # finetune=opt.finetune,
+                                    # cnn_type=opt.cnn_type,
+                                    # text_number=opt.text_number,
+                                    # text_dim=opt.text_dim,
+                                    # use_abs=opt.use_abs,
+                                    # no_imgnorm=opt.no_imgnorm)
 
-        self.txt_enc = EncoderText(vocab_size=opt.vocab_size,
-                                   word_dim=opt.word_dim,
-                                   embed_size=opt.embed_size,
-                                   num_layers=opt.num_layers,
-                                   use_abs=opt.use_abs)
+        self.txt_enc = EncoderText(vocab_size=vocab_size,
+                                   word_dim=word_dim,
+                                   embed_size=caption_encoder_embedding_size,
+                                   num_layers=caption_encoder_num_layers)
         if torch.cuda.is_available():
             self.img_enc.cuda()
             self.txt_enc.cuda()
-            cudnn.benchmark = True
+            cudnn.benchmark = True  # todo check what it is and remove. Upd: is used for rntime parameters optimization in case of gru architecture
 
         #   captioning elements
-
         self.encoder = EncoderRNN(
-            opt.dim_vid,
-            opt.dim_hidden,
-            bidirectional=False,#opt.bidirectional,
-            input_dropout_p=opt.input_dropout_p,
-            rnn_cell=opt.rnn_type,
-            rnn_dropout_p=opt.rnn_dropout_p)
+            dim_vid,
+            dim_caption_generation_hidden,
+            input_dropout_p=input_dropout_p_caption_generation_enc,
+            rnn_cell=rnn_type_caption_generation_enc,
+            rnn_dropout_p=rnn_dropout_p_caption_generation_enc,
+            bidirectional=bidirectional_enc)
         self.decoder = DecoderRNN(
-            opt.vocab_size,
-            opt.max_len,
-            opt.dim_hidden,
-            opt.dim_word,
-            input_dropout_p=opt.input_dropout_p,
-            rnn_cell=opt.rnn_type,
-            rnn_dropout_p=opt.rnn_dropout_p,
-            bidirectional=opt.bidirectional)
+            vocab_size,
+            max_caption_len,
+            dim_caption_generation_hidden,
+            dim_word_caption_generation,
+            input_dropout_p=input_dropout_p_caption_generation_dec,
+            rnn_cell=rnn_type_caption_generation_dec,
+            rnn_dropout_p=rnn_dropout_p_caption_generation_dec,
+            bidirectional=bidirectional_dec)
 
-        self.caption_model = S2VTAttModel(self.encoder, self.decoder)  # todo Вот тут мы хотим что-то другое для image captioning
+        self.caption_model = S2VTAttModel(self.encoder,
+                                          self.decoder)  # todo Вот тут мы хотим что-то другое для image captioning
 
         self.crit = utils.LanguageModelCriterion()  # todo Надо разобраться
-        self.rl_crit = utils.RewardCriterion()  # todo Похоже, что не используется
+        # self.rl_crit = utils.RewardCriterion()  # todo Похоже, что не используется
 
         if torch.cuda.is_available():
             self.caption_model.cuda()
 
         # Loss and Optimizer
-        self.criterion = ContrastiveLoss(margin=opt.margin,
-                                         measure=opt.measure,
-                                         max_violation=opt.max_violation)
+        self.criterion = ContrastiveLoss(margin=margin,
+                                         measure=measure,
+                                         max_violation=max_violation)
         params = list(self.txt_enc.parameters())
         params += list(self.img_enc.parameters())
         params += list(self.decoder.parameters())
         params += list(self.encoder.parameters())
         params += list(self.caption_model.parameters())
 
-        if opt.finetune:
-            params += list(self.img_enc.cnn.parameters())
+        # if opt.finetune:
+        #     params += list(self.img_enc.cnn.parameters())
         self.params = params
 
-        self.optimizer = torch.optim.Adam(params, lr=opt.learning_rate)
+        self.optimizer = torch.optim.Adam(params, lr=learning_rate)
 
-        self.Eiters = 0
+        # self.Eiters = 0
 
     def calcualte_caption_loss(self, fc_feats, labels, masks):
 
@@ -124,7 +144,7 @@ class VSRN(object):
         self.img_enc.eval()
         self.txt_enc.eval()
 
-    def forward_emb(self, images, captions, lengths, scene_text, volatile=False):
+    def forward_emb(self, images, captions, lengths, scene_text):
         """Compute the image and caption embeddings
         """
         # Set mini-batch dataset
@@ -144,13 +164,13 @@ class VSRN(object):
 
         return img_emb, cap_emb, GCN_img_emd
 
-    def forward_loss(self, img_emb, cap_emb, **kwargs):
+    def forward_loss(self, img_emb, cap_emb):
         """Compute the loss given pairs of image and caption embeddings
         """
         loss = self.criterion(img_emb, cap_emb)
         return loss
 
-    def train_emb(self, images, captions, lengths, ids, caption_labels, caption_masks, scene_text, *args):
+    def train_emb(self, images, captions, lengths, ids, caption_labels, caption_masks, scene_text):
         """One training step given images and captions.
         """
 
@@ -172,5 +192,6 @@ class VSRN(object):
         # compute gradient and do SGD step
         loss.backward()
         if self.grad_clip > 0:
-            clip_grad_norm_(self.params, self.grad_clip)
+            clip_grad_norm_(self.params,
+                            self.grad_clip)
         self.optimizer.step()

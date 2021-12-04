@@ -11,7 +11,11 @@ from search_service import l2norm
 # RNN Based Language Model
 # Это энкодер для кепшнов, тут будет Labse
 class EncoderText(nn.Module):
-    def __init__(self, vocab_size, word_dim, embed_size, num_layers,
+    def __init__(self,
+                 vocab_size,
+                 word_dim,
+                 embed_size,
+                 num_layers,
                  use_abs=False):
         super(EncoderText, self).__init__()
         self.use_abs = use_abs

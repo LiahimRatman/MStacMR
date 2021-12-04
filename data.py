@@ -5,7 +5,7 @@ from dao import load_from_json
 from data_utils import prepare_captions, collate_fn
 
 
-class TrainDataset:
+class FullDataset:
     def __init__(self,
                  images_path=None,
                  annotation_map_path=None,
@@ -29,7 +29,9 @@ class TrainDataset:
         self.train_map = load_from_json(self.annotation_map_path)
         if self.use_precomputed_embeddings:
             self.precomputed_image_embeddings = np.load(self.image_embeddings_path)
-            self.precomputed_ocr_embeddings = np.load(self.ocr_embeddings_path)
+            ocr_dummy = np.zeros((self.precomputed_image_embeddings.shape[0], 16, 300), dtype='float16')
+            # self.precomputed_ocr_embeddings = np.load(self.ocr_embeddings_path)
+            self.precomputed_ocr_embeddings = ocr_dummy
 
     def __getitem__(self, index):
         item_id = index // self.im_div
@@ -127,12 +129,19 @@ def get_dataloader(type, #train, eval, inference_images, inference_captions
     #                             transform=transform)
     if type == 'train':
         print(type)
-        dataset = TrainDataset(use_precomputed_embeddings=True,
-                               annotation_map_path=annotations_map_name,
-                               images_path=images_path,  # todo
-                               image_embeddings_path=image_embeddings_name,
-                               ocr_embeddings_path=ocr_embeddings_name,
-                               vocab=vocab)
+        dataset = FullDataset(use_precomputed_embeddings=True,
+                              annotation_map_path=annotations_map_name,
+                              images_path=images_path,  # todo
+                              image_embeddings_path=image_embeddings_name,
+                              ocr_embeddings_path=ocr_embeddings_name,
+                              vocab=vocab)
+    elif type == 'eval':
+        dataset = FullDataset(use_precomputed_embeddings=True,
+                              annotation_map_path=annotations_map_name,
+                              images_path=images_path,  # todo
+                              image_embeddings_path=image_embeddings_name,
+                              ocr_embeddings_path=ocr_embeddings_name,
+                              vocab=vocab)
     else:
         dataset = None
         pass

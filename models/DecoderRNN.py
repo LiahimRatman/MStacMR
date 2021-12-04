@@ -64,8 +64,7 @@ class DecoderRNN(nn.Module):
                 encoder_outputs,
                 encoder_hidden,
                 targets=None,
-                mode='train',
-                opt={}):
+                mode='train'):
         """
 
         Inputs: inputs, encoder_hidden, encoder_outputs, function, teacher_forcing_ratio
@@ -78,9 +77,13 @@ class DecoderRNN(nn.Module):
         - **seq_logprobs** (batch_size, max_length, vocab_size): tensors containing the outputs of the decoding function.
         - **seq_preds** (batch_size, max_length): predicted symbols
         """
-        sample_max = opt.get('sample_max', 1)
-        beam_size = opt.get('beam_size', 1)
-        temperature = opt.get('temperature', 1.0)
+        # sample_max = opt.get('sample_max', 1)
+        # beam_size = opt.get('beam_size', 1)
+        # temperature = opt.get('temperature', 1.0)
+        # Параметры декодера
+        sample_max = 1
+        beam_size = 1
+        temperature = 1.0
 
         batch_size, _, _ = encoder_outputs.size()
         decoder_hidden = self._init_rnn_state(encoder_hidden)
