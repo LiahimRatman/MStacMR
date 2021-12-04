@@ -29,7 +29,9 @@ class TrainDataset:
         self.train_map = load_from_json(self.annotation_map_path)
         if self.use_precomputed_embeddings:
             self.precomputed_image_embeddings = np.load(self.image_embeddings_path)
-            self.precomputed_ocr_embeddings = np.load(self.ocr_embeddings_path)
+            ocr_dummy = np.zeros_like(self.precomputed_image_embeddings)
+            # self.precomputed_ocr_embeddings = np.load(self.ocr_embeddings_path)
+            self.precomputed_ocr_embeddings = ocr_dummy
 
     def __getitem__(self, index):
         item_id = index // self.im_div
