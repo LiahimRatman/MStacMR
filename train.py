@@ -168,19 +168,88 @@ def main():  # todo refactor parameters
     opt = None
     val_loader = None
     # Construct the model
-    model = VSRN(opt)
+    # Namespace(batch_size=128, bidirectional=0, cnn_type='vgg19', crop_size=224, data_name='precomp',
+    #           data_path='data_big', dim_hidden=512, dim_vid=2048, dim_word=300, embed_size=2048, finetune=False,
+    #           grad_clip=2.0,
+    #           img_dim=2048, input_dropout_p=0.2, learning_rate=0.0002, log_step=10,
+    #           lr_update=15, margin=0.2, max_len=60, max_violation=False, measure='cosine', no_imgnorm=False,
+    #           num_epochs=30, num_layers=1, reset_train=False, resume='', rnn_dropout_p=0.5, rnn_type='gru',
+    #           text_dim=300, text_number=15, use_abs=False, use_restval=False, val_step=500, vocab_path='./vocab/',
+    #           word_dim=300, workers=10, logger_name='runs/runX')
+    # parameters
+    # todo Сделать после того как переделаю энкодеры
+    num_epochs = 30
+    batch_size = 128
+    grad_clip = 2.0
+    gcn_embedding_size = 512  # хз, что где
+    image_embedding_dim = 512
+    data_name = 'precomp'
+    caption_encoder_num_layers = 1
+    vocab_size = len(vocab)
+    caption_encoder_word_dim = 300  # caption embedding size
+    dim_vid = 512  # было 2048, подозреваю, что это много
+    dim_caption_generation_hidden = 512  # мб теперь надо поменять
+    input_dropout_p_caption_generation_enc = 0.2
+    input_dropout_p_caption_generation_dec = 0.2
+    rnn_type_caption_generation_enc = 'gru'
+    rnn_type_caption_generation_dec = 'gru'
+    rnn_dropout_p_caption_generation_enc = 0.5
+    rnn_dropout_p_caption_generation_dec = 0.5
+    bidirectional_enc = False
+    bidirectional_dec = False
+    max_caption_len = 60
+    dim_word_caption_generation = 300  # output of encoder decoder embedding size
+    margin = 0.2
+    measure = 'cosine'
+    max_violation = False
+    learning_rate = 0.0002
+    use_abs = False
+    lr_update = 15
+    log_step = 10
+
+    # model = VSRN(opt)
+    model = VSRN(grad_clip,
+                 image_embedding_dim,
+                 gcn_embedding_size,
+                 vocab_size,
+                 caption_encoder_word_dim,
+                 caption_encoder_num_layers,
+                 use_abs,  # todo мб выпилить
+                 dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
+                 dim_caption_generation_hidden,
+                 input_dropout_p_caption_generation_enc,
+                 rnn_type_caption_generation_enc,
+                 rnn_dropout_p_caption_generation_enc,
+                 bidirectional_enc,
+                 max_caption_len,
+                 dim_word_caption_generation,
+                 input_dropout_p_caption_generation_dec,
+                 rnn_type_caption_generation_dec,
+                 rnn_dropout_p_caption_generation_dec,
+                 bidirectional_dec,
+                 margin,
+                 measure,
+                 max_violation,
+                 learning_rate)
 
     # Train the Model
     best_rsum = 0
 
-    for epoch in range(opt.num_epochs):
-        adjust_learning_rate(opt, model.optimizer, epoch)
+    for epoch in range(num_epochs):
+        adjust_learning_rate(learning_rate,
+                             lr_update,
+                             model.optimizer,
+                             epoch)
 
         # train for one epoch
-        best_rsum = train(opt, train_loader, model, epoch, val_loader, best_rsum)
-
+        best_rsum = train(train_loader, model, epoch, val_loader, best_rsum)
+        print(best_rsum)
+        raise ValueError
         # evaluate on validation set
-        rsum = validate(opt, val_loader, model)  # todo подумать как реализовать разделение на вал сет. Пока не трогаю
+        rsum = validate(log_step,
+                        measure,
+                        val_loader,
+                        model)  # todo подумать как реализовать разделение на вал сет. Пока не трогаю
 
         # remember best R@ sum and save checkpoint
         is_best = rsum > best_rsum
@@ -190,11 +259,11 @@ def main():  # todo refactor parameters
             'model': model.state_dict(),
             'best_rsum': best_rsum,
             'opt': opt,
-            'Eiters': model.Eiters,
+            # 'Eiters': model.Eiters,
         }, is_best, prefix=opt.logger_name + '/')
 
 
-def train(opt, train_loader, model, epoch, val_loader, best_rsum):  # todo add time tracking
+def train(train_loader, model, epoch, val_loader, best_rsum):  # todo add time tracking
     # switch to train mode
     model.train_start()
     for i, train_data in enumerate(train_loader):
