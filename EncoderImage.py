@@ -20,7 +20,7 @@ def EncoderImage(use_precomputed,
                  embed_size,
                  finetune=False,
                  cnn_type='vgg19',
-                 text_number=15,
+                 text_number=16,
                  text_dim=300,
                  use_abs=False,
                  no_imgnorm=False,
@@ -190,13 +190,21 @@ class EncoderImagePrecomp(nn.Module):
         super(EncoderImagePrecomp, self).load_state_dict(new_state)
 
 
+# Encoder for precomputed embeddings
 class EncoderImagePrecompAttn(nn.Module):
-    def __init__(self, img_dim, embed_size, data_name, text_number, text_dim, use_abs=False, no_imgnorm=False):
+    def __init__(self,
+                 img_dim,
+                 embed_size,
+                 data_name,  # todo выпилить data_name
+                 text_number,
+                 text_dim,
+                 use_abs=False,
+                 no_imgnorm=False):
         super(EncoderImagePrecompAttn, self).__init__()
         self.embed_size = embed_size
         self.no_imgnorm = no_imgnorm
         self.use_abs = use_abs
-        self.data_name = data_name
+        self.data_name = 'f30k_precomp'  # todo check here     data_name
 
         self.fc = nn.Linear(img_dim, embed_size)
 
@@ -211,7 +219,7 @@ class EncoderImagePrecompAttn(nn.Module):
         self.Rs_GCN_3 = Rs_GCN(in_channels=embed_size, inter_channels=embed_size)
         self.Rs_GCN_4 = Rs_GCN(in_channels=embed_size, inter_channels=embed_size)
 
-        if self.data_name == 'f30k_precomp':
+        if self.data_name == 'f30k_precomp' or True:  # todo check here
             self.bn = nn.BatchNorm1d(embed_size)
 
         # FOR SCENE TEXT FEATURES
@@ -237,7 +245,7 @@ class EncoderImagePrecompAttn(nn.Module):
 
         # IMAGE FEATURES
         fc_img_emd = self.fc(images)
-        if self.data_name != 'f30k_precomp':
+        if self.data_name != 'f30k_precomp' and False:  # todo check here
             fc_img_emd = l2norm(fc_img_emd)
 
         # fc_img_emd = torch.cat((fc_img_emd, fc_scene_text), dim=1)
@@ -279,7 +287,7 @@ class EncoderImagePrecompAttn(nn.Module):
 
         # features = torch.mean(GCN_img_emd, dim=1)
 
-        if self.data_name == 'f30k_precomp':
+        if self.data_name == 'f30k_precomp' or True:  # todo check here
             features = self.bn(features)
 
         # normalize in the joint embedding space
