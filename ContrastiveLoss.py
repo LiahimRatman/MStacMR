@@ -10,7 +10,10 @@ class ContrastiveLoss(nn.Module):
     Compute contrastive loss
     """
 
-    def __init__(self, margin=0, measure=False, max_violation=False):
+    def __init__(self,
+                 margin=0,
+                 measure=False,
+                 max_violation=False):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
         if measure == 'order':
@@ -20,7 +23,7 @@ class ContrastiveLoss(nn.Module):
 
         self.max_violation = max_violation
 
-    def forward(self, im, s):
+    def forward(self, im, s):  # todo разобраться тут
         # compute image-sentence score matrix
         scores = self.sim(im, s)
         diagonal = scores.diag().view(im.size(0), 1)

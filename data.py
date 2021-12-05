@@ -111,15 +111,10 @@ def get_dataloader(type, #train, eval, inference_images, inference_captions
                    image_embeddings_name,
                    ocr_embeddings_name,
                    images_path,
-                   # data_name,
-                   # split,
-                   # root,
-                   # json,
                    vocab,
                    # transform,
-                   batch_size=100,
+                   batch_size=128,
                    shuffle=True,
-                   # ids=None,
                    num_workers=0):
     # if 'f8k' in data_name or 'f30k' in data_name:
     #     dataset = FlickrDataset(root=root,
@@ -128,7 +123,6 @@ def get_dataloader(type, #train, eval, inference_images, inference_captions
     #                             vocab=vocab,
     #                             transform=transform)
     if type == 'train':
-        print(type)
         dataset = FullDataset(use_precomputed_embeddings=True,
                               annotation_map_path=annotations_map_name,
                               images_path=images_path,  # todo
