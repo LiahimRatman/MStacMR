@@ -1,16 +1,8 @@
 import pickle
-# import os
+from tqdm import tqdm
 
-# import torch
-
-# import data
-# from vocab import Vocabulary  # NOQA
 from VSRN import VSRN
-# from evaluation import i2t, t2i, AverageMeter, LogCollector, encode_data
-# import tensorboard_logger as tb_logger
-# import argparse
-
-from metrics_utils import accuracy, validate
+from metrics_utils import validate
 from dao import save_checkpoint
 from data import get_dataloader
 from train_utils import adjust_learning_rate
@@ -275,7 +267,7 @@ def main():  # todo refactor parameters
 def train(train_loader, model, epoch, val_loader, log_step, measure, best_rsum):  # todo add time tracking
     # switch to train mode
     model.train_start()
-    for i, train_data in enumerate(train_loader):
+    for i, train_data in tqdm(enumerate(train_loader)):
         model.train_start()
 
         # measure data loading time
@@ -308,7 +300,7 @@ def train(train_loader, model, epoch, val_loader, log_step, measure, best_rsum):
         #             data_time=data_time, e_log=str(model.logger)))
 
         # # validate at every val_step
-        if i % 100 == 0:
+        if i % 100 == 0 and i > 0:
             # validate(opt, val_loader, model)
 
             # evaluate on validation set
