@@ -6,7 +6,7 @@ from torch.autograd import Variable
 from ContrastiveLoss import ContrastiveLoss
 from EncoderImage import EncoderImage
 from EncoderText import EncoderText
-from models import DecoderRNN, EncoderRNN, S2VTAttModel
+from caption_models import DecoderRNN, EncoderRNN, S2VTAttModel
 import train_utils as utils
 
 
