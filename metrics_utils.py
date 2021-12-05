@@ -1,5 +1,3 @@
-import logging
-
 from search_service import i2t, t2i, encode_data
 
 
