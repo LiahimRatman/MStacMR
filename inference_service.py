@@ -1,7 +1,10 @@
 def init_models_storages():
     # todo здесь нужно прописать инит. Это хранилище будет интиться при старте апихи. + Желательно сделать предзагрузку эмбеддингов
+    models_storage = {
+        'yolo_plus_clip': 'runs/log/model_best.pth.tar'
+    }
     storages = {
-        'models_storage': None,
+        'models_storage': models_storage,
         'image_models_storage': None,
         'ocr_models_storage': None,
     }
@@ -12,8 +15,8 @@ def calculate_image_embedding(image,
                               model,
                               image_model,
                               ocr_model=None,
-                              model_type='clip'):
-    if model_type == 'clip':
+                              model_type='yolo_plus_clip'):
+    if model_type == 'yolo_plus_clip':
         image_embeddings = image_model(image)
         ocr_embeddings = ocr_model(image)
         encoded_image = model.img_enc(image_embeddings, ocr_embeddings)
