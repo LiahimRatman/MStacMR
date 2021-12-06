@@ -1,4 +1,5 @@
-/VG
+/VG/images
+/VG/labels
 /yolov5
 /STACMR_train/CTC/images
 /STACMR_train/CTC/detections
@@ -6,6 +7,11 @@
 /STACMR_train/flickr30k/detections
 /STACMR_train/text_caps/images
 /STACMR_train/text_caps/detections
-/precomputed_embeddings
-/checkpoints_and_vocabs
+/precomputed_embeddings/*.npy
+/checkpoints_and_vocabs/*.json
+/checkpoints_and_vocabs/*.pt
+/checkpoints_and_vocabs/*.pkl
 /yolov5l.pt
+/yolo_best.pt
+/YOLOv5_train/YOLOv5_model
+/runs
