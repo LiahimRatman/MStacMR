@@ -287,7 +287,7 @@ class DetectMultiBackend(nn.Module):
         #   ONNX Runtime:           *.onnx
         #   OpenCV DNN:             *.onnx with dnn=True
         #   TensorRT:               *.engine
-        from caption_models import attempt_download, attempt_load  # scoped to avoid circular import
+        from models.experimental import attempt_download, attempt_load  # scoped to avoid circular import
 
         super().__init__()
         w = str(weights[0] if isinstance(weights, list) else weights)
