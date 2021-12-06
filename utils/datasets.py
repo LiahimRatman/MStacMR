@@ -414,10 +414,7 @@ class LoadImagesAndLabels(Dataset):
 
         # Check cache
         self.label_files = img2label_paths(self.img_files)  # labels
-        print(p)
-        print(self.label_files)
         cache_path = (p if p.is_file() else Path(self.label_files[0]).parent).with_suffix('.cache')
-        print(cache_path)
         try:
             cache, exists = np.load(cache_path, allow_pickle=True).item(), True  # load dict
             assert cache['version'] == self.cache_version  # same version
