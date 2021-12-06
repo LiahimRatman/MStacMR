@@ -8,3 +8,4 @@
 /STACMR_train/text_caps/detections
 /precomputed_embeddings
 /checkpoints_and_vocabs
+/yolov5l.pt
