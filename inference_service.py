@@ -1,10 +1,12 @@
 import clip
+import numpy as np
 import pickle
 import torch
 
 from VSRN import VSRN
 from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
+from prepare_image_regions_embeddings import CLIP_EMBEDDING_SIZE, MAX_DETECTIONS_PER_IMAGE
 
 
 def init_models_storages():
@@ -46,7 +48,8 @@ def inference_on_image(image_path,
                        storages,
                        model_type,
                        save_emb=False):
-    model_path = storages['models_storage'][model_type]  # 'runs/log/model_best.pth.tar'
+    # model_path = storages['models_storage'][model_type]
+    model_path = 'runs/log/model_best.pth.tar'
     # image_model = storages['image_models_storage'][model_type]
     # ocr_model = storages['ocr_models_storage'][model_type]
     model_clip, preprocess = clip.load("ViT-B/32")  # todo Переделать загрузку
@@ -56,10 +59,17 @@ def inference_on_image(image_path,
                                                  model_clip,
                                                  preprocess,
                                                  torch.device("cpu"))
+    stacked_image_features = []
+    for _ in range(MAX_DETECTIONS_PER_IMAGE):
+        if _ < len(region_embeddings):
+            stacked_image_features.append(region_embeddings[_])
+        else:
+            stacked_image_features.append(torch.zeros(CLIP_EMBEDDING_SIZE))
+    region_embeddings = np.stack([item.cpu() for item in stacked_image_features], axis=0)
 
     # todo Сделать ocr
-    ocr_embeddings = inference_ocr()
-
+    ocr_embeddings = inference_ocr()  # Тут должен быть массив размера 16 * 300
+    # ocr_embeddings = np.zeros_like(region_embeddings)[:16, :300]
 
     checkpoint = torch.load(model_path,
                             map_location="cpu")
@@ -119,8 +129,8 @@ def inference_on_image(image_path,
 
     model.val_start()
     model.load_state_dict(checkpoint['model'])
-    # images = Variable(images)
-    # scene_text = Variable(scene_text)
+    region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
+    ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
     if torch.cuda.is_available():
         region_embeddings = region_embeddings.cuda()
         ocr_embeddings = ocr_embeddings.cuda()
@@ -150,27 +160,27 @@ def inference_on_caption(caption,
     return nearest_image
 
 
-# def inference_generate_caption(image_path,
-#                                storages,
-#                                model_type,
-#                                save_emb=False):
-#     model = storages['models_storage'][model_type]
-#     # image_model = storages['image_models_storage'][model_type]
-#     # ocr_model = storages['ocr_models_storage'][model_type]
-#     model_clip, preprocess = clip.load("ViT-B/32")  # todo Переделать загрузку
-#     detected_regions = inference_yolo_on_one_image(image_path, 'yolov5/yolo_best.pt')
-#     region_embeddings = inference_clip_one_image(image_path,
-#                                                  detected_regions,
-#                                                  model_clip,
-#                                                  preprocess,
-#                                                  torch.device("cpu"))
-#
-#     # todo Сделать ocr
-#     ocr_embeddings = inference_ocr()
-#
-#     full_image_embedding = model(region_embeddings, ocr_embeddings)  # todo не совсем так
-#
-#     return generate_caption(full_image_embedding)
+def inference_generate_caption(image_path,
+                               storages,
+                               model_type,
+                               save_emb=False):
+    model = storages['models_storage'][model_type]
+    # image_model = storages['image_models_storage'][model_type]
+    # ocr_model = storages['ocr_models_storage'][model_type]
+    model_clip, preprocess = clip.load("ViT-B/32")  # todo Переделать загрузку
+    detected_regions = inference_yolo_on_one_image(image_path, 'yolov5/yolo_best.pt')
+    region_embeddings = inference_clip_one_image(image_path,
+                                                 detected_regions,
+                                                 model_clip,
+                                                 preprocess,
+                                                 torch.device("cpu"))
+
+    # todo Сделать ocr
+    ocr_embeddings = inference_ocr()
+
+    full_image_embedding = model(region_embeddings, ocr_embeddings)  # todo не совсем так
+
+    return generate_caption(full_image_embedding)
 
 
 def load_image_embeddings_from_storage():
@@ -189,4 +199,4 @@ def find_nearest_image():
     pass
 
 
-print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', 'yolo_best.pt', None).shape)
+print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', 'yolo_best.pt', None))
