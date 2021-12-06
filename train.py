@@ -31,122 +31,10 @@ class Vocabulary(object):  # todo выпилить это
         return len(self.word2idx)
 
 
-def main():  # todo refactor parameters
-    # Hyper Parameters
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--data_path', default='data_big',
-    #                     help='path to datasets')
-    # parser.add_argument('--data_name', default='precomp',
-    #                     help='{coco,f8k,f30k,10crop}_precomp|coco|f8k|f30k')
-    # parser.add_argument('--vocab_path', default='./vocab/',
-    #                     help='Path to saved vocabulary pickle files.')
-    # parser.add_argument('--margin', default=0.2, type=float,
-    #                     help='Rank loss margin.')
-    # parser.add_argument('--num_epochs', default=30, type=int,
-    #                     help='Number of training epochs.')
-    # parser.add_argument('--batch_size', default=128, type=int,
-    #                     help='Size of a training mini-batch.')
-    # parser.add_argument('--word_dim', default=300, type=int,
-    #                     help='Dimensionality of the word embedding.')
-    # parser.add_argument('--embed_size', default=2048, type=int,
-    #                     help='Dimensionality of the joint embedding.')
-    # parser.add_argument('--grad_clip', default=2., type=float,
-    #                     help='Gradient clipping threshold.')
-    # parser.add_argument('--crop_size', default=224, type=int,
-    #                     help='Size of an image crop as the CNN input.')
-    # parser.add_argument('--num_layers', default=1, type=int,
-    #                     help='Number of GRU layers.')
-    # parser.add_argument('--learning_rate', default=.0002, type=float,
-    #                     help='Initial learning rate.')
-    # parser.add_argument('--lr_update', default=15, type=int,
-    #                     help='Number of epochs to update the learning rate.')
-    # parser.add_argument('--workers', default=10, type=int,
-    #                     help='Number of data loader workers.')
-    # parser.add_argument('--log_step', default=10, type=int,
-    #                     help='Number of steps to print and record the log.')
-    # parser.add_argument('--val_step', default=500, type=int,
-    #                     help='Number of steps to run validation.')
-    # parser.add_argument('--logger_name', default='runs/runX',
-    #                     help='Path to save the model and Tensorboard log.')
-    # parser.add_argument('--resume', default='', type=str, metavar='PATH',
-    #                     help='path to latest checkpoint (default: none)')
-    # parser.add_argument('--max_violation', action='store_true',
-    #                     help='Use max instead of sum in the rank loss.')
-    # parser.add_argument('--img_dim', default=2048, type=int,
-    #                     help='Dimensionality of the image embedding.')
-    # parser.add_argument('--finetune', action='store_true',
-    #                     help='Fine-tune the image encoder.')
-    # parser.add_argument('--cnn_type', default='vgg19',
-    #                     help="""The CNN used for image encoder
-    #                     (e.g. vgg19, resnet152)""")
-    # parser.add_argument('--use_restval', action='store_true',
-    #                     help='Use the restval data for training on MSCOCO.')
-    # parser.add_argument('--measure', default='cosine',
-    #                     help='Similarity measure used (cosine|order)')
-    # parser.add_argument('--use_abs', action='store_true',
-    #                     help='Take the absolute value of embedding vectors.')
-    # parser.add_argument('--no_imgnorm', action='store_true',
-    #                     help='Do not normalize the image embeddings.')
-    # parser.add_argument('--reset_train', action='store_true',
-    #                     help='Ensure the training is always done in '
-    #                     'train mode (Not recommended).')
-    # ### AM Parameters
-    # parser.add_argument('--text_number', default=15, type=int,
-    #                     help='Number of ocr tokens used (max. 20).')
-    # parser.add_argument('--text_dim', default=300, type=int,
-    #                     help='Dimension of scene text embedding - default 300')
-    #
-    # ###caption parameters
-    # parser.add_argument(
-    #     '--dim_vid',
-    #     type=int,
-    #     default=2048,
-    #     help='dim of features of video frames')
-    # parser.add_argument(
-    #     '--dim_hidden',
-    #     type=int,
-    #     default=512,
-    #     help='size of the rnn hidden layer')
-    # parser.add_argument(
-    #     "--bidirectional",
-    #     type=int,
-    #     default=0,
-    #     help="0 for disable, 1 for enable. encoder/decoder bidirectional.")
-    # parser.add_argument(
-    #     '--input_dropout_p',
-    #     type=float,
-    #     default=0.2,
-    #     help='strength of dropout in the Language Model RNN')
-    # parser.add_argument(
-    #     '--rnn_type', type=str, default='gru', help='lstm or gru')
-    #
-    # parser.add_argument(
-    #     '--rnn_dropout_p',
-    #     type=float,
-    #     default=0.5,
-    #     help='strength of dropout in the Language Model RNN')
-    #
-    # parser.add_argument(
-    #     '--dim_word',
-    #     type=int,
-    #     default=300,  # 512
-    #     help='the encoding size of each token in the vocabulary, and the video.'
-    # )
-    # parser.add_argument(
-    #     "--max_len",
-    #     type=int,
-    #     default=60,
-    #     help='max length of captions(containing <sos>,<eos>)')
-    #
-    # opt = parser.parse_args()
-    # print(opt)
-
+def main():
     # Load Vocabulary Wrapper  # todo make new vocab
     vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
 
-    # Get data loaders
-    # train_loader, val_loader = data.get_loaders(opt.data_path, opt.data_name, vocab, opt.crop_size, opt.batch_size,
-    #                                             opt.workers, opt.use_restval, opt.max_len, opt.text_number, opt.text_dim)
     train_loader = get_dataloader(
         type='train',
         annotations_map_name='checkpoints_and_vocabs/full_dataset_train_mapa_good.json',
@@ -164,19 +52,6 @@ def main():  # todo refactor parameters
         vocab=vocab
     )
 
-    # opt = None
-    # val_loader = None
-    # Construct the model
-    # Namespace(batch_size=128, bidirectional=0, cnn_type='vgg19', crop_size=224, data_name='precomp',
-    #           data_path='data_big', dim_hidden=512, dim_vid=2048, dim_word=300, embed_size=2048, finetune=False,
-    #           grad_clip=2.0,
-    #           img_dim=2048, input_dropout_p=0.2, learning_rate=0.0002, log_step=10,
-    #           lr_update=15, margin=0.2, max_len=60, max_violation=False, measure='cosine', no_imgnorm=False,
-    #           num_epochs=30, num_layers=1, reset_train=False, resume='', rnn_dropout_p=0.5, rnn_type='gru',
-    #           text_dim=300, text_number=15, use_abs=False, use_restval=False, val_step=500, vocab_path='./vocab/',
-    #           word_dim=300, workers=10, logger_name='runs/runX')
-    # parameters
-    # todo Сделать после того как переделаю энкодеры
     num_epochs = 30
     # batch_size = 128
     grad_clip = 2.0
