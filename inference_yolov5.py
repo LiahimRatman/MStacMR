@@ -1,6 +1,6 @@
 import torch
 
-from caption_models import DetectMultiBackend
+from models.common import DetectMultiBackend
 from utils.datasets import LoadImages
 from utils.general import check_img_size, non_max_suppression, xyxy2xywh, scale_coords
 
