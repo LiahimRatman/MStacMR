@@ -14,9 +14,6 @@ def inference_yolo_on_one_image(image_path,
                                 model,
                                 device):
 
-    # device = torch.device("cpu")
-    # model = DetectMultiBackend(model_path, device=device, dnn=False)
-
     stride = model.stride
     imgsz = check_img_size(IMAGE_SIZE, s=stride)
     model.warmup(imgsz=(1, 3, imgsz, imgsz),

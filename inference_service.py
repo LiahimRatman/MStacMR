@@ -68,19 +68,10 @@ def init_preload_model_storage(model_names_list):
 
 def inference_on_image(image_path,
                        storage,
-                       model_type,
                        save_emb=False):
     model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
     model_yolov5 = storage['yolov5']['model']
     vsrn_model = storage['vsrn']['model']
-    # vsrn_vocab = storage['vsrn']['vocab']
-    # vsrn_params = storage['vsrn']['params']
-    # model_path = storages['models_storage'][model_type]
-    # model_path = 'runs/log/model_best.pth.tar'
-    # image_model = storages['image_models_storage'][model_type]
-    # ocr_model = storages['ocr_models_storage'][model_type]
-    # model_clip, preprocess = clip.load("ViT-B/32")
-    # detected_regions = inference_yolo_on_one_image(image_path, 'yolo_best.pt')
     detected_regions = inference_yolo_on_one_image(image_path, model_yolov5, torch.device("cpu"))
     region_embeddings = inference_clip_one_image(image_path,
                                                  detected_regions,
@@ -97,36 +88,6 @@ def inference_on_image(image_path,
 
     ocr_embeddings = inference_ocr(region_embeddings)  # Тут должен быть массив размера 16 * 300
 
-    # checkpoint = torch.load(model_path, map_location="cpu")
-    # vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
-    # params = get_config('inference_config.yaml')
-    # params['vocab_size'] = len(vocab)
-    # model = VSRN(params['grad_clip'],
-    #              params['image_embedding_dim'],
-    #              params['gcn_embedding_size'],
-    #              params['vocab_size'],
-    #              params['caption_encoder_word_dim'],
-    #              params['caption_encoder_num_layers'],
-    #              params['caption_encoder_embedding_size'],
-    #              params['dim_vid'],  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
-    #              params['dim_caption_generation_hidden'],
-    #              params['input_dropout_p_caption_generation_enc'],
-    #              params['rnn_type_caption_generation_enc'],
-    #              params['rnn_dropout_p_caption_generation_enc'],
-    #              params['bidirectional_enc'],
-    #              params['max_caption_len'],
-    #              params['dim_word_caption_generation'],
-    #              params['input_dropout_p_caption_generation_dec'],
-    #              params['rnn_type_caption_generation_dec'],
-    #              params['rnn_dropout_p_caption_generation_dec'],
-    #              params['bidirectional_dec'],
-    #              params['margin'],
-    #              params['measure'],
-    #              params['max_violation'],
-    #              params['learning_rate'])
-    #
-    # model.load_state_dict(checkpoint['model'])
-    # model.val_start()
     region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
     ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
     if torch.cuda.is_available():
@@ -147,49 +108,9 @@ def inference_on_image(image_path,
 
 
 def inference_on_caption(caption,
-                         storage,
-                         model_type):
-    # model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
-    # model_yolov5 = storage['yolov5']['model']
+                         storage):
     vsrn_model = storage['vsrn']['model']
     vsrn_vocab = storage['vsrn']['vocab']
-    # vsrn_params = storage['vsrn']['params']
-
-    # model_path = storages['models_storage'][model_type]
-    # model_path = 'runs/log/model_best.pth.tar'
-    # checkpoint = torch.load(model_path,
-    #                         map_location="cpu")
-    #
-    # vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
-    # params = get_config('inference_config.yaml')
-    # params['vocab_size'] = len(vocab)
-    # model = VSRN(params['grad_clip'],
-    #              params['image_embedding_dim'],
-    #              params['gcn_embedding_size'],
-    #              params['vocab_size'],
-    #              params['caption_encoder_word_dim'],
-    #              params['caption_encoder_num_layers'],
-    #              params['caption_encoder_embedding_size'],
-    #              params['dim_vid'],  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
-    #              params['dim_caption_generation_hidden'],
-    #              params['input_dropout_p_caption_generation_enc'],
-    #              params['rnn_type_caption_generation_enc'],
-    #              params['rnn_dropout_p_caption_generation_enc'],
-    #              params['bidirectional_enc'],
-    #              params['max_caption_len'],
-    #              params['dim_word_caption_generation'],
-    #              params['input_dropout_p_caption_generation_dec'],
-    #              params['rnn_type_caption_generation_dec'],
-    #              params['rnn_dropout_p_caption_generation_dec'],
-    #              params['bidirectional_dec'],
-    #              params['margin'],
-    #              params['measure'],
-    #              params['max_violation'],
-    #              params['learning_rate'])
-    #
-    # model.load_state_dict(checkpoint['model'])
-    # model.val_start()
-    # # caption_model = storages['models_storage'][model_type]
     tokens = nltk.tokenize.word_tokenize(str(caption).lower())
 
     caption = []
@@ -208,52 +129,12 @@ def inference_on_caption(caption,
 
 def inference_generate_caption(image_path,
                                storage,
-                               model_type,
                                save_emb=False):
     model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
     model_yolov5 = storage['yolov5']['model']
     vsrn_model = storage['vsrn']['model']
     vsrn_vocab = storage['vsrn']['vocab']
-    vsrn_params = storage['vsrn']['params']
-    # model = storages['models_storage'][model_type]
-    # image_model = storages['image_models_storage'][model_type]
-    # ocr_model = storages['ocr_models_storage'][model_type]
 
-    # model_path = storages['models_storage'][model_type]
-    # model_path = 'runs/log/model_best.pth.tar'
-    # checkpoint = torch.load(model_path,
-    #                         map_location="cpu")
-    #
-    # vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
-    # params = get_config('inference_config.yaml')
-    # params['vocab_size'] = len(vocab)
-    # model = VSRN(params['grad_clip'],
-    #              params['image_embedding_dim'],
-    #              params['gcn_embedding_size'],
-    #              params['vocab_size'],
-    #              params['caption_encoder_word_dim'],
-    #              params['caption_encoder_num_layers'],
-    #              params['caption_encoder_embedding_size'],
-    #              params['dim_vid'],  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
-    #              params['dim_caption_generation_hidden'],
-    #              params['input_dropout_p_caption_generation_enc'],
-    #              params['rnn_type_caption_generation_enc'],
-    #              params['rnn_dropout_p_caption_generation_enc'],
-    #              params['bidirectional_enc'],
-    #              params['max_caption_len'],
-    #              params['dim_word_caption_generation'],
-    #              params['input_dropout_p_caption_generation_dec'],
-    #              params['rnn_type_caption_generation_dec'],
-    #              params['rnn_dropout_p_caption_generation_dec'],
-    #              params['bidirectional_dec'],
-    #              params['margin'],
-    #              params['measure'],
-    #              params['max_violation'],
-    #              params['learning_rate'])
-    #
-    # model_clip, preprocess = clip.load("ViT-B/32")  # todo Переделать загрузку
-    # model.load_state_dict(checkpoint['model'])
-    # model.val_start()
     detected_regions = inference_yolo_on_one_image(image_path, model_yolov5, torch.device("cpu"))
     region_embeddings = inference_clip_one_image(image_path,
                                                  detected_regions,
@@ -316,10 +197,11 @@ def save_image_embedding():
 
 
 def run_api(models_startup):
+    # this is a test
     storage = init_preload_model_storage(models_startup)
-    print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage, None))
-    print(inference_on_caption('I love dogs', storage, None))
-    print(inference_generate_caption('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage, None))
+    print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
+    print(inference_on_caption('I love dogs', storage))
+    print(inference_generate_caption('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
 
 
 models_for_startup = {
