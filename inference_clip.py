@@ -9,7 +9,9 @@ def inference_clip_one_image(image_path,
                              crop_labels,
                              model,
                              preprocess,
-                             device):
+                             device,
+                             from_txt=False,
+                             labels_path=''):
     # model.cuda().eval()
     model.to(device)
     model.eval()
@@ -22,13 +24,28 @@ def inference_clip_one_image(image_path,
     print("Context length:", context_length)
     print("Vocab size:", vocab_size)
 
-    crops = [{
-        'class_id': int(crop_label[0]),
-        'x': float(crop_label[1]),
-        'y': float(crop_label[2]),
-        'w': float(crop_label[3]),
-        'h': float(crop_label[4]),
-    } for crop_label in crop_labels]
+    if from_txt:
+        with open(labels_path + image_path.split('/')[-1].split('.')[0] + '.txt', 'r') as f:
+            text = f.readlines()
+        crops = [{
+            'class_id': int(crop_label[0]),
+            'x': float(crop_label[1]),
+            'y': float(crop_label[2]),
+            'w': float(crop_label[3]),
+            'h': float(crop_label[4]),
+        } for crop_label in [item.strip().split() for item in text]]
+    else:
+        crops = [{
+            'class_id': int(crop_label[0]),
+            'x': float(crop_label[1]),
+            'y': float(crop_label[2]),
+            'w': float(crop_label[3]),
+            'h': float(crop_label[4]),
+        } for crop_label in crop_labels]
+
+    if not crops:
+        return []
+
     imm = Image.open(image_path)
     images = []
     for crop in crops:
