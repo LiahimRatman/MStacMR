@@ -4,6 +4,7 @@ import torch
 from VSRN import VSRN
 from data import get_dataloader
 from search_service import encode_data, i2t, t2i
+from Vocabulary import Vocabulary
 
 
 def evaluate(model_path):

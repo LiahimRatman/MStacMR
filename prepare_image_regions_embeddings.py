@@ -41,7 +41,7 @@ def get_datasets_embeddings(model_clip,
     if save_emb:
         np.save(save_path, np.stack([item for item in full_dataset_image_embeddings], axis=0))
 
-    return full_dataset_image_embeddings
+    return np.stack([item for item in full_dataset_image_embeddings], axis=0)
 
 
 if __name__ == "__main__":
