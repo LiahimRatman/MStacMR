@@ -1,3 +1,10 @@
+import clip
+import torch
+
+from inference_yolov5 import inference_yolo_on_one_image
+from inference_clip import inference_clip_one_image
+
+
 def init_models_storages():
     # todo здесь нужно прописать инит. Это хранилище будет интиться при старте апихи. + Желательно сделать предзагрузку эмбеддингов
     models_storage = {
@@ -8,6 +15,7 @@ def init_models_storages():
         'image_models_storage': None,
         'ocr_models_storage': None,
     }
+
     return storages
 
 
@@ -32,19 +40,30 @@ def calculate_caption_embedding(caption,
     return encoded_text
 
 
-def inference_on_image(image,
+def inference_on_image(image_path,
                        storages,
-                       model_type):
+                       model_type,
+                       save_emb=False):
     model = storages['models_storage'][model_type]
-    image_model = storages['image_models_storage'][model_type]
-    ocr_model = storages['ocr_models_storage'][model_type]
-    encoded_image = calculate_image_embedding(image,
-                                              model,
-                                              image_model,
-                                              ocr_model,
-                                              model_type)
-    captions_embeddings = load_caption_embeddings_from_storage(model_type)
-    nearest_caption = find_nearest_caption(encoded_image, captions_embeddings)
+    # image_model = storages['image_models_storage'][model_type]
+    # ocr_model = storages['ocr_models_storage'][model_type]
+    model, preprocess = clip.load("ViT-B/32")  # todo Переделать загрузку
+    detected_regions = inference_yolo_on_one_image(image_path, 'yolov5/yolo_best.pt')
+    region_embeddings = inference_clip_one_image(image_path,
+                                   detected_regions,
+                                   model,
+                                   preprocess,
+                                   torch.device("cpu"))
+
+    # todo Сделать ocr
+    ocr_embeddings = inference_ocr()
+
+    full_image_embedding = model(region_embeddings, ocr_embeddings)
+    captions_embeddings = load_caption_embeddings_from_storage(model_type)  # todo Сделать загрузку из storage
+    nearest_caption = find_nearest_caption(full_image_embedding, captions_embeddings)
+
+    if save_emb:
+        save_image_embedding()  # todo Сделать сохранение эмбеддингов
 
     return nearest_caption
 
@@ -75,3 +94,7 @@ def find_nearest_caption():
 
 def find_nearest_image():
     pass
+
+
+inference_on_image('C:/Users/Mikhail Korotkov/PycharmProjects/MStacMR/VG/images/test/101.jpg',
+                                   'yolo_best.pt', None)
