@@ -50,6 +50,9 @@ def inference_yolo_on_one_image(image_path,
     return results
 
 
+# todo add batch inference
+
+
 # pred = inference_yolo_on_one_image('C:/Users/Mikhail Korotkov/PycharmProjects/MStacMR/VG/images/test/101.jpg',
 #                                    'yolo_best.pt')
 #

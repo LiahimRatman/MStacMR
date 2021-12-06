@@ -79,13 +79,3 @@ def prepare_clip_dataset_embeddings(annotations_map_path='STACMR_train/full_data
 
 # todo we need to make inference server with model pre-load
 # todo change structure
-def inference_clip_one_image(image_path,
-                             image_labels,
-                             image_encoder_model_name):
-    pass
-
-
-def inference_clip_batch(images_batch,
-                         images_labels,
-                         image_encoder_model_name):
-    pass

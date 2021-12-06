@@ -61,7 +61,7 @@ class VSRN(object):
             self.txt_enc.cuda()
             cudnn.benchmark = True  # todo check what it is and remove. Upd: is used for rntime parameters optimization in case of gru architecture
 
-        #   captioning elements
+        #  caption generation elements
         self.encoder = EncoderRNN(
             dim_vid,
             dim_caption_generation_hidden,

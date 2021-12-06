@@ -47,6 +47,8 @@ def inference_clip_one_image(image_path,
     return image_features
 
 
+# todo add batch inference
+
 # model, preprocess = clip.load("ViT-B/32")
 # emb = inference_clip_one_image('C:/Users/Mikhail Korotkov/PycharmProjects/MStacMR/VG/images/test/101.jpg',
 #                          [(torch.tensor(445.), 0.3518750071525574, 0.6633333563804626, 0.32875001430511475, 0.20999999344348907)],
