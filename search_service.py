@@ -131,7 +131,9 @@ def t2i(images, captions, npts=None, measure='cosine', return_ranks=False):
 
 
 def encode_data(model, data_loader, log_step=10):
-    """Encode all images and captions loadable by `data_loader`
+    """
+    Encode all images and captions loadable by `data_loader`
+    Is used for validation
     """
     # batch_time = AverageMeter()
     # val_logger = LogCollector()
