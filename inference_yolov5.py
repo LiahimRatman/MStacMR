@@ -11,16 +11,14 @@ IOU_THRESHOLD = 0.45
 
 
 def inference_yolo_on_one_image(image_path,
-                                model_path):
-
-    device = torch.device("cpu")
-    model = DetectMultiBackend(model_path, device=device, dnn=False)
+                                model,
+                                device):
 
     stride = model.stride
     imgsz = check_img_size(IMAGE_SIZE, s=stride)
-    dataset = LoadImages(image_path, img_size=imgsz, stride=stride, auto=model.pt)
     model.warmup(imgsz=(1, 3, imgsz, imgsz),
                  half=False)  # warmup
+    dataset = LoadImages(image_path, img_size=imgsz, stride=stride, auto=model.pt)
     for path, im, im0s, vid_cap, s in dataset:
         im = torch.from_numpy(im).to(device)
         im = im.float()  # uint8 to fp16/32

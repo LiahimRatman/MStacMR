@@ -32,37 +32,6 @@ def main():
 
     params = get_config('inference_config.yaml')
     params['vocab_size'] = len(vocab)
-    # num_epochs = 30
-    # # batch_size = 128
-    # grad_clip = 2.0
-    # gcn_embedding_size = 512
-    # image_embedding_dim = 512
-    # # data_name = 'precomp'
-    # caption_encoder_num_layers = 1
-    # vocab_size = len(vocab)
-    # caption_encoder_word_dim = 300  # caption embedding size
-    # caption_encoder_embedding_size = 512
-    # dim_vid = 512  # было 2048, подозреваю, что это много
-    # dim_caption_generation_hidden = 512  # мб теперь надо поменять
-    # input_dropout_p_caption_generation_enc = 0.2
-    # input_dropout_p_caption_generation_dec = 0.2
-    # rnn_type_caption_generation_enc = 'gru'
-    # rnn_type_caption_generation_dec = 'gru'
-    # rnn_dropout_p_caption_generation_enc = 0.5
-    # rnn_dropout_p_caption_generation_dec = 0.5
-    # bidirectional_enc = False
-    # bidirectional_dec = False
-    # max_caption_len = 60
-    # dim_word_caption_generation = 300  # output of encoder decoder embedding size
-    # margin = 0.2
-    # measure = 'cosine'
-    # max_violation = False
-    # learning_rate = 0.0002
-    # lr_update = 15
-    # log_step = 10
-
-    # model = VSRN(opt)
-
     model = VSRN(params['grad_clip'],
                  params['image_embedding_dim'],
                  params['gcn_embedding_size'],

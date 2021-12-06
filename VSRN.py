@@ -58,10 +58,6 @@ class VSRN(object):
                                    word_dim=word_dim,
                                    embed_size=caption_encoder_embedding_size,
                                    num_layers=caption_encoder_num_layers)
-        if torch.cuda.is_available():
-            self.img_enc.cuda()
-            self.txt_enc.cuda()
-            cudnn.benchmark = True  # todo check what it is and remove. Upd: is used for rntime parameters optimization in case of gru architecture
 
         #  caption generation elements
         self.encoder = EncoderRNN(
@@ -83,6 +79,11 @@ class VSRN(object):
 
         self.caption_model = S2VTAttModel(self.encoder,
                                           self.decoder)  # todo Вот тут мы хотим что-то другое для image captioning
+        if torch.cuda.is_available():
+            self.img_enc.cuda()
+            self.txt_enc.cuda()
+            self.caption_model.cuda()
+            cudnn.benchmark = True  # todo check what it is and remove. Upd: is used for rntime parameters optimization in case of gru architecture
 
         self.crit = utils.LanguageModelCriterion()  # todo Надо разобраться
         # self.rl_crit = utils.RewardCriterion()  # todo Похоже, что не используется
