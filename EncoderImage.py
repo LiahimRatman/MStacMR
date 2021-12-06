@@ -34,12 +34,14 @@ def EncoderImage(use_precomputed,
             # USED FOR SCENE TEXT FEATURES
             img_enc = EncoderImagePrecompAttn(
                 img_dim, embed_size, data_name, text_number, text_dim, use_abs, no_imgnorm)
-        else:
-            img_enc = EncoderImagePrecomp(
-                img_dim, embed_size, use_abs, no_imgnorm)  # todo выпилить
-    else:
-        img_enc = EncoderImageFull(
-            embed_size, finetune, cnn_type, use_abs, no_imgnorm)  # todo переделать
+
+    assert "Bad Decision"
+    #     else:
+    #         img_enc = EncoderImagePrecomp(
+    #             img_dim, embed_size, use_abs, no_imgnorm)  # todo выпилить
+    # else:
+    #     img_enc = EncoderImageFull(
+    #         embed_size, finetune, cnn_type, use_abs, no_imgnorm)  # todo переделать
 
     return img_enc
 
@@ -265,7 +267,8 @@ class EncoderImagePrecompAttn(nn.Module):
         # visual_features = hidden_state[0]
 
         # SCENE TEXT FEATURES --- AM --------
-        fc_scene_text = self.bn_scene_text(scene_text)
+        # fc_scene_text = self.bn_scene_text(scene_text)
+        fc_scene_text = scene_text
         fc_scene_text = F.leaky_relu(self.fc_scene_text(fc_scene_text))
         fc_scene_text = l2norm(fc_scene_text)
 
