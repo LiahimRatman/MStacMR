@@ -1,6 +1,6 @@
 # YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 # PASCAL VOC dataset http://host.robots.ox.ac.uk/pascal/VOC
-# Example usage: python train.py --data VOC.yaml
+# Example usage: python train_yolov5.py --data VOC.yaml
 # parent
 # ├── yolov5
 # └── datasets

@@ -110,7 +110,7 @@ class WandbLogger():
     includes hyperparameters, system configuration and metrics, model metrics,
     and basic data metrics and analyses.
 
-    By providing additional command line arguments to train.py, datasets,
+    By providing additional command line arguments to train_yolov5.py, datasets,
     models and predictions can also be logged.
 
     For more on how this logger is used, see the Weights & Biases documentation:

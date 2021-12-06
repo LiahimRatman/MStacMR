@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from caption_models import Conv
+from models.common import Conv
 from utils.downloads import attempt_download
 
 
@@ -88,7 +88,7 @@ class Ensemble(nn.ModuleList):
 
 
 def attempt_load(weights, map_location=None, inplace=True, fuse=True):
-    from caption_models import Detect, Model
+    from models import Detect, Model
 
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
