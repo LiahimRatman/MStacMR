@@ -4,6 +4,7 @@ import pickle
 import torch
 
 from VSRN import VSRN
+from Vocabulary import Vocabulary
 from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
 from prepare_image_regions_embeddings import CLIP_EMBEDDING_SIZE, MAX_DETECTIONS_PER_IMAGE
@@ -37,11 +38,11 @@ def calculate_image_embedding(image,
         pass
 
 
-def calculate_caption_embedding(caption,
-                                model):
-    encoded_text = model.txt_enc(caption)  # todo Проверить, что заведется
-
-    return encoded_text
+# def calculate_caption_embedding(caption,
+#                                 model):
+#     encoded_text = model.txt_enc(caption)  # todo Проверить, что заведется
+#
+#     return encoded_text
 
 
 def inference_on_image(image_path,
@@ -68,8 +69,8 @@ def inference_on_image(image_path,
     region_embeddings = np.stack([item.cpu() for item in stacked_image_features], axis=0)
 
     # todo Сделать ocr
-    ocr_embeddings = inference_ocr()  # Тут должен быть массив размера 16 * 300
-    # ocr_embeddings = np.zeros_like(region_embeddings)[:16, :300]
+    # ocr_embeddings = inference_ocr()  # Тут должен быть массив размера 16 * 300
+    ocr_embeddings = np.zeros_like(region_embeddings)[:16, :300]
 
     checkpoint = torch.load(model_path,
                             map_location="cpu")
@@ -127,8 +128,8 @@ def inference_on_image(image_path,
                  max_violation,
                  learning_rate)
 
-    model.val_start()
     model.load_state_dict(checkpoint['model'])
+    model.val_start()
     region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
     ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
     if torch.cuda.is_available():
@@ -142,8 +143,8 @@ def inference_on_image(image_path,
     captions_embeddings = load_caption_embeddings_from_storage(model_type)  # todo Сделать загрузку из storage
     nearest_caption = find_nearest_caption(full_image_embedding, captions_embeddings)
 
-    if save_emb:
-        save_image_embedding()  # todo Сделать сохранение эмбеддингов
+    # if save_emb:
+    #     save_image_embedding()  # todo Сделать сохранение эмбеддингов
 
     return nearest_caption
 
@@ -151,9 +152,70 @@ def inference_on_image(image_path,
 def inference_on_caption(caption,
                          storages,
                          model_type):
-    caption_model = storages['models_storage'][model_type]
-    encoded_caption = calculate_caption_embedding(caption,
-                                                  caption_model)
+    # model_path = storages['models_storage'][model_type]
+    model_path = 'runs/log/model_best.pth.tar'
+    checkpoint = torch.load(model_path,
+                            map_location="cpu")
+
+    vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
+    num_epochs = 30
+    # batch_size = 128
+    grad_clip = 2.0
+    gcn_embedding_size = 512
+    image_embedding_dim = 512
+    # data_name = 'precomp'
+    caption_encoder_num_layers = 1
+    vocab_size = len(vocab)
+    caption_encoder_word_dim = 300  # caption embedding size
+    caption_encoder_embedding_size = 512
+    dim_vid = 512  # было 2048, подозреваю, что это много
+    dim_caption_generation_hidden = 512  # мб теперь надо поменять
+    input_dropout_p_caption_generation_enc = 0.2
+    input_dropout_p_caption_generation_dec = 0.2
+    rnn_type_caption_generation_enc = 'gru'
+    rnn_type_caption_generation_dec = 'gru'
+    rnn_dropout_p_caption_generation_enc = 0.5
+    rnn_dropout_p_caption_generation_dec = 0.5
+    bidirectional_enc = False
+    bidirectional_dec = False
+    max_caption_len = 60
+    dim_word_caption_generation = 300  # output of encoder decoder embedding size
+    margin = 0.2
+    measure = 'cosine'
+    max_violation = False
+    learning_rate = 0.0002
+    lr_update = 15
+    log_step = 10
+    model = VSRN(grad_clip,
+                 image_embedding_dim,
+                 gcn_embedding_size,
+                 vocab_size,
+                 caption_encoder_word_dim,
+                 caption_encoder_num_layers,
+                 caption_encoder_embedding_size,
+                 dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
+                 dim_caption_generation_hidden,
+                 input_dropout_p_caption_generation_enc,
+                 rnn_type_caption_generation_enc,
+                 rnn_dropout_p_caption_generation_enc,
+                 bidirectional_enc,
+                 max_caption_len,
+                 dim_word_caption_generation,
+                 input_dropout_p_caption_generation_dec,
+                 rnn_type_caption_generation_dec,
+                 rnn_dropout_p_caption_generation_dec,
+                 bidirectional_dec,
+                 margin,
+                 measure,
+                 max_violation,
+                 learning_rate)
+
+    model.load_state_dict(checkpoint['model'])
+    model.val_start()
+    # caption_model = storages['models_storage'][model_type]
+    with torch.no_grad():
+        encoded_caption = model.txt_enc(caption)
+
     images_embeddings = load_image_embeddings_from_storage(model_type)
     nearest_image = find_nearest_image(encoded_caption, images_embeddings)
 
@@ -164,23 +226,107 @@ def inference_generate_caption(image_path,
                                storages,
                                model_type,
                                save_emb=False):
-    model = storages['models_storage'][model_type]
+    # model = storages['models_storage'][model_type]
     # image_model = storages['image_models_storage'][model_type]
     # ocr_model = storages['ocr_models_storage'][model_type]
+
+    # model_path = storages['models_storage'][model_type]
+    model_path = 'runs/log/model_best.pth.tar'
+    checkpoint = torch.load(model_path,
+                            map_location="cpu")
+
+    vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
+    num_epochs = 30
+    # batch_size = 128
+    grad_clip = 2.0
+    gcn_embedding_size = 512
+    image_embedding_dim = 512
+    # data_name = 'precomp'
+    caption_encoder_num_layers = 1
+    vocab_size = len(vocab)
+    caption_encoder_word_dim = 300  # caption embedding size
+    caption_encoder_embedding_size = 512
+    dim_vid = 512  # было 2048, подозреваю, что это много
+    dim_caption_generation_hidden = 512  # мб теперь надо поменять
+    input_dropout_p_caption_generation_enc = 0.2
+    input_dropout_p_caption_generation_dec = 0.2
+    rnn_type_caption_generation_enc = 'gru'
+    rnn_type_caption_generation_dec = 'gru'
+    rnn_dropout_p_caption_generation_enc = 0.5
+    rnn_dropout_p_caption_generation_dec = 0.5
+    bidirectional_enc = False
+    bidirectional_dec = False
+    max_caption_len = 60
+    dim_word_caption_generation = 300  # output of encoder decoder embedding size
+    margin = 0.2
+    measure = 'cosine'
+    max_violation = False
+    learning_rate = 0.0002
+    lr_update = 15
+    log_step = 10
+    model = VSRN(grad_clip,
+                 image_embedding_dim,
+                 gcn_embedding_size,
+                 vocab_size,
+                 caption_encoder_word_dim,
+                 caption_encoder_num_layers,
+                 caption_encoder_embedding_size,
+                 dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
+                 dim_caption_generation_hidden,
+                 input_dropout_p_caption_generation_enc,
+                 rnn_type_caption_generation_enc,
+                 rnn_dropout_p_caption_generation_enc,
+                 bidirectional_enc,
+                 max_caption_len,
+                 dim_word_caption_generation,
+                 input_dropout_p_caption_generation_dec,
+                 rnn_type_caption_generation_dec,
+                 rnn_dropout_p_caption_generation_dec,
+                 bidirectional_dec,
+                 margin,
+                 measure,
+                 max_violation,
+                 learning_rate)
+
     model_clip, preprocess = clip.load("ViT-B/32")  # todo Переделать загрузку
-    detected_regions = inference_yolo_on_one_image(image_path, 'yolov5/yolo_best.pt')
+    detected_regions = inference_yolo_on_one_image(image_path, 'yolo_best.pt')
     region_embeddings = inference_clip_one_image(image_path,
                                                  detected_regions,
                                                  model_clip,
                                                  preprocess,
                                                  torch.device("cpu"))
+    stacked_image_features = []
+    for _ in range(MAX_DETECTIONS_PER_IMAGE):
+        if _ < len(region_embeddings):
+            stacked_image_features.append(region_embeddings[_])
+        else:
+            stacked_image_features.append(torch.zeros(CLIP_EMBEDDING_SIZE))
+    region_embeddings = np.stack([item.cpu() for item in stacked_image_features], axis=0)
 
     # todo Сделать ocr
-    ocr_embeddings = inference_ocr()
+    # ocr_embeddings = inference_ocr()
+    ocr_embeddings = np.zeros_like(region_embeddings)[:16, :300]
 
-    full_image_embedding = model(region_embeddings, ocr_embeddings)  # todo не совсем так
+    model.load_state_dict(checkpoint['model'])
+    model.val_start()
+    region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
+    ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
+    if torch.cuda.is_available():
+        region_embeddings = region_embeddings.cuda()
+        ocr_embeddings = ocr_embeddings.cuda()
 
-    return generate_caption(full_image_embedding)
+    # Forward
+    with torch.no_grad():
+        img_emb, GCN_img_emd = model.img_enc(region_embeddings, ocr_embeddings)
+
+    seq_logprobs, seq_preds = model.caption_model(GCN_img_emd, None, 'inference')
+    # (region_embeddings, ocr_embeddings)  # todo попробовать от общего эмбеддинга
+
+    sentence = []
+    for letter in seq_preds[0]:
+        sentence.append(vocab.idx2word[letter.item()])
+
+    return ' '.join(sentence)
 
 
 def load_image_embeddings_from_storage():
@@ -199,4 +345,6 @@ def find_nearest_image():
     pass
 
 
-print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', 'yolo_best.pt', None))
+# print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', 'yolo_best.pt', None))
+print(inference_generate_caption('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', None, None, None))
+

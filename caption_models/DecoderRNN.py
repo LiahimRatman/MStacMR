@@ -107,15 +107,15 @@ class DecoderRNN(nn.Module):
             seq_logprobs = torch.cat(seq_logprobs, 1)
 
         elif mode == 'inference':
-            if beam_size > 1:
-                return self.sample_beam(encoder_outputs, decoder_hidden, opt)
+            # if beam_size > 1:
+            #     return self.sample_beam(encoder_outputs, decoder_hidden, opt)
 
             for t in range(self.max_length - 1):
                 context = self.attention(
                     decoder_hidden.squeeze(0), encoder_outputs)
 
                 if t == 0:  # input <bos>
-                    it = torch.LongTensor([self.sos_id] * batch_size).cuda()
+                    it = torch.LongTensor([self.sos_id] * batch_size)#.cuda()
                 elif sample_max:
                     sampleLogprobs, it = torch.max(logprobs, 1)
                     seq_logprobs.append(sampleLogprobs.view(-1, 1))
