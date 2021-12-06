@@ -2,6 +2,7 @@ import pickle
 import torch
 
 from VSRN import VSRN
+from dao import get_config
 from data import get_dataloader
 from search_service import encode_data, i2t, t2i
 from Vocabulary import Vocabulary
@@ -14,59 +15,61 @@ def evaluate(model_path):
 
     vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
     # load vocabulary used by the model
+    params = get_config('inference_config.yaml')
+    params['vocab_size'] = len(vocab)
 
     # construct model
     # batch_size = 128
-    grad_clip = 2.0
-    gcn_embedding_size = 512
-    image_embedding_dim = 512
-    caption_encoder_num_layers = 1
-    vocab_size = len(vocab)
-    caption_encoder_word_dim = 300  # caption embedding size
-    caption_encoder_embedding_size = 512
-    dim_vid = 512  # было 2048, подозреваю, что это много
-    dim_caption_generation_hidden = 512  # мб теперь надо поменять
-    input_dropout_p_caption_generation_enc = 0.2
-    input_dropout_p_caption_generation_dec = 0.2
-    rnn_type_caption_generation_enc = 'gru'
-    rnn_type_caption_generation_dec = 'gru'
-    rnn_dropout_p_caption_generation_enc = 0.5
-    rnn_dropout_p_caption_generation_dec = 0.5
-    bidirectional_enc = False
-    bidirectional_dec = False
-    max_caption_len = 60
-    dim_word_caption_generation = 300  # output of encoder decoder embedding size
-    margin = 0.2
-    measure = 'cosine'
-    max_violation = False
-    learning_rate = 0.0002
-    lr_update = 15
-    log_step = 10
+    # grad_clip = 2.0
+    # gcn_embedding_size = 512
+    # image_embedding_dim = 512
+    # caption_encoder_num_layers = 1
+    # vocab_size = len(vocab)
+    # caption_encoder_word_dim = 300  # caption embedding size
+    # caption_encoder_embedding_size = 512
+    # dim_vid = 512  # было 2048, подозреваю, что это много
+    # dim_caption_generation_hidden = 512  # мб теперь надо поменять
+    # input_dropout_p_caption_generation_enc = 0.2
+    # input_dropout_p_caption_generation_dec = 0.2
+    # rnn_type_caption_generation_enc = 'gru'
+    # rnn_type_caption_generation_dec = 'gru'
+    # rnn_dropout_p_caption_generation_enc = 0.5
+    # rnn_dropout_p_caption_generation_dec = 0.5
+    # bidirectional_enc = False
+    # bidirectional_dec = False
+    # max_caption_len = 60
+    # dim_word_caption_generation = 300  # output of encoder decoder embedding size
+    # margin = 0.2
+    # measure = 'cosine'
+    # max_violation = False
+    # learning_rate = 0.0002
+    # lr_update = 15
+    # log_step = 10
 
     # model = VSRN(opt)
-    model = VSRN(grad_clip,
-                 image_embedding_dim,
-                 gcn_embedding_size,
-                 vocab_size,
-                 caption_encoder_word_dim,
-                 caption_encoder_num_layers,
-                 caption_encoder_embedding_size,
-                 dim_vid,  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
-                 dim_caption_generation_hidden,
-                 input_dropout_p_caption_generation_enc,
-                 rnn_type_caption_generation_enc,
-                 rnn_dropout_p_caption_generation_enc,
-                 bidirectional_enc,
-                 max_caption_len,
-                 dim_word_caption_generation,
-                 input_dropout_p_caption_generation_dec,
-                 rnn_type_caption_generation_dec,
-                 rnn_dropout_p_caption_generation_dec,
-                 bidirectional_dec,
-                 margin,
-                 measure,
-                 max_violation,
-                 learning_rate)
+    model = VSRN(params['grad_clip'],
+                 params['image_embedding_dim'],
+                 params['gcn_embedding_size'],
+                 params['vocab_size'],
+                 params['caption_encoder_word_dim'],
+                 params['caption_encoder_num_layers'],
+                 params['caption_encoder_embedding_size'],
+                 params['dim_vid'],  # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
+                 params['dim_caption_generation_hidden'],
+                 params['input_dropout_p_caption_generation_enc'],
+                 params['rnn_type_caption_generation_enc'],
+                 params['rnn_dropout_p_caption_generation_enc'],
+                 params['bidirectional_enc'],
+                 params['max_caption_len'],
+                 params['dim_word_caption_generation'],
+                 params['input_dropout_p_caption_generation_dec'],
+                 params['rnn_type_caption_generation_dec'],
+                 params['rnn_dropout_p_caption_generation_dec'],
+                 params['bidirectional_dec'],
+                 params['margin'],
+                 params['measure'],
+                 params['max_violation'],
+                 params['learning_rate'])
 
     # load model state
     model.load_state_dict(checkpoint['model'])
@@ -89,11 +92,11 @@ def evaluate(model_path):
     # no cross-validation, full evaluation
     r, rt = i2t(img_embs,
                 cap_embs,
-                measure=measure,
+                measure=params['measure'],
                 return_ranks=True)
     ri, rti = t2i(img_embs,
                   cap_embs,
-                  measure=measure,
+                  measure=params['measure'],
                   return_ranks=True)
     ar = (r[0] + r[1] + r[2]) / 3
     ari = (ri[0] + ri[1] + ri[2]) / 3
