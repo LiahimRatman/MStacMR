@@ -115,7 +115,9 @@ class DecoderRNN(nn.Module):
                     decoder_hidden.squeeze(0), encoder_outputs)
 
                 if t == 0:  # input <bos>
-                    it = torch.LongTensor([self.sos_id] * batch_size)#.cuda()
+                    it = torch.LongTensor([self.sos_id] * batch_size)
+                    if torch.cuda.is_available():
+                        it = it.cuda()
                 elif sample_max:
                     sampleLogprobs, it = torch.max(logprobs, 1)
                     seq_logprobs.append(sampleLogprobs.view(-1, 1))
