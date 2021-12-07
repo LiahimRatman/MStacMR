@@ -97,14 +97,29 @@ def inference_on_image(image_path,
     # Forward
     with torch.no_grad():
         full_image_embedding, _ = vsrn_model.img_enc(region_embeddings, ocr_embeddings)
-    return full_image_embedding
-    captions_embeddings = load_caption_embeddings_from_storage(model_type)  # todo Сделать загрузку из storage
-    nearest_caption = find_nearest_caption(full_image_embedding, captions_embeddings)
+
+    # captions_embeddings = load_caption_embeddings_from_storage(model_type)  # todo Сделать загрузку из storage
+
+    caption_embs = []
+    captions_list = [
+        "A woman posing for the camera, holding a pink, open umbrella and wearing a bright, floral, ruched bathing suit, by a life guard stand with lake, green trees, and a blue sky with a few clouds behind.",
+        "Very bad day is today",
+        "Dogs are my best friends",
+        "I love to eat wood",
+        "Such a wonderful night"
+    ]
+    for caption in captions_list:
+        cap_emb = inference_on_caption(caption=caption,
+                                       storage=storage)
+        caption_embs.append(cap_emb[0])
+
+    captions_embeddings = np.stack(caption_embs, axis=0)
+    nearest_caption_index = find_nearest_caption(full_image_embedding, captions_embeddings)
 
     if save_emb:
         save_image_embedding()  # todo Сделать сохранение эмбеддингов
 
-    return nearest_caption
+    return captions_list[nearest_caption_index]
 
 
 def inference_on_caption(caption,
@@ -184,12 +199,18 @@ def load_caption_embeddings_from_storage():
     pass
 
 
-def find_nearest_caption():
-    pass
+def find_nearest_caption(full_image_embedding, captions_embeddings):
+    d = np.dot(full_image_embedding, captions_embeddings.T).flatten()
+    indexes = np.argsort(d)[::-1]
+
+    return indexes[0]
 
 
-def find_nearest_image():
-    pass
+def find_nearest_image(full_caption_embedding, images_embeddings):
+    d = np.dot(full_caption_embedding, images_embeddings.T).flatten()
+    indexes = np.argsort(d)[::-1]
+
+    return indexes[0]
 
 
 def save_image_embedding():
