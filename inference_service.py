@@ -11,6 +11,7 @@ from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
 from prepare_image_regions_embeddings import CLIP_EMBEDDING_SIZE, MAX_DETECTIONS_PER_IMAGE
 from models.common import DetectMultiBackend
+from constants import models_for_startup, embeddings_storage_config
 
 
 def init_preload_model_storage(model_names_list):
@@ -21,6 +22,13 @@ def init_preload_model_storage(model_names_list):
             clip_model, clip_preprocess = clip.load(item['model_name'])
             storage[model_type]['model'] = clip_model.to(item['device']).eval()
             storage[model_type]['preprocess'] = clip_preprocess
+            input_resolution = clip_model.visual.input_resolution
+            context_length = clip_model.context_length
+            vocab_size = clip_model.vocab_size
+            print("CLIP Model parameters:", f"{np.sum([int(np.prod(p.shape)) for p in clip_model.parameters()]):,}")
+            print("CLIP Input resolution:", input_resolution)
+            print("CLIP Context length:", context_length)
+            print("CLIP Vocab size:", vocab_size)
         elif model_type == 'yolov5':
             storage[model_type] = {}
             yolov5_model = DetectMultiBackend(item['model_name'], device=item['device'], dnn=False)
@@ -68,7 +76,8 @@ def init_preload_model_storage(model_names_list):
 
 def inference_on_image(image_path,
                        storage,
-                       save_emb=False):
+                       save_emb=False,
+                       deeper=True):
     model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
     model_yolov5 = storage['yolov5']['model']
     vsrn_model = storage['vsrn']['model']
@@ -98,32 +107,26 @@ def inference_on_image(image_path,
     with torch.no_grad():
         full_image_embedding, _ = vsrn_model.img_enc(region_embeddings, ocr_embeddings)
 
-    # captions_embeddings = load_caption_embeddings_from_storage(model_type)  # todo Сделать загрузку из storage
-
-    caption_embs = []
-    captions_list = [
-        "A woman posing for the camera, holding a pink, open umbrella and wearing a bright, floral, ruched bathing suit, by a life guard stand with lake, green trees, and a blue sky with a few clouds behind.",
-        "Very bad day is today",
-        "Dogs are my best friends",
-        "I love to eat wood",
-        "Such a wonderful night"
-    ]
-    for caption in captions_list:
-        cap_emb = inference_on_caption(caption=caption,
-                                       storage=storage)
-        caption_embs.append(cap_emb[0])
-
-    captions_embeddings = np.stack(caption_embs, axis=0)
-    nearest_caption_index = find_nearest_caption(full_image_embedding, captions_embeddings)
-
     if save_emb:
-        save_image_embedding()  # todo Сделать сохранение эмбеддингов
+        save_caption_embedding_to_storage(full_image_embedding,
+                                          embeddings_storage_config)  # todo Сделать сохранение эмбеддингов
 
-    return captions_list[nearest_caption_index]
+    if deeper:
+        captions_embeddings, captions_list = load_caption_embeddings_from_storage(None,
+                                                                                  None,
+                                                                                  storage)  # todo Сделать загрузку из storage
+
+        nearest_caption_index = find_nearest_caption(full_image_embedding, captions_embeddings)
+
+        return captions_list[nearest_caption_index]
+    else:
+        return full_image_embedding
 
 
 def inference_on_caption(caption,
-                         storage):
+                         storage,
+                         save_emb=False,
+                         deeper=True):
     vsrn_model = storage['vsrn']['model']
     vsrn_vocab = storage['vsrn']['vocab']
     tokens = nltk.tokenize.word_tokenize(str(caption).lower())
@@ -135,11 +138,18 @@ def inference_on_caption(caption,
     caption = torch.Tensor(caption).int()
     with torch.no_grad():
         encoded_caption = vsrn_model.txt_enc(caption.unsqueeze(0), [len(caption)])  # todo Тут бы проверить
-    return encoded_caption
-    images_embeddings = load_image_embeddings_from_storage(model_type)
-    nearest_image = find_nearest_image(encoded_caption, images_embeddings)
 
-    return nearest_image
+    if save_emb:
+        save_caption_embedding_to_storage(encoded_caption,
+                                          embeddings_storage_config)
+    # return encoded_caption  # todo это удалим
+    if deeper:
+        images_embeddings, image_paths = load_image_embeddings_from_storage(None, None, storage)
+        nearest_image_caption = find_nearest_image(encoded_caption, images_embeddings)
+
+        return image_paths[nearest_image_caption]
+    else:
+        return encoded_caption
 
 
 def inference_generate_caption(image_path,
@@ -191,14 +201,6 @@ def inference_ocr(region_embeddings):  # todo Сделать OCR
     return np.zeros_like(region_embeddings)[:16, :300]
 
 
-def load_image_embeddings_from_storage():
-    pass
-
-
-def load_caption_embeddings_from_storage():
-    pass
-
-
 def find_nearest_caption(full_image_embedding, captions_embeddings):
     d = np.dot(full_image_embedding, captions_embeddings.T).flatten()
     indexes = np.argsort(d)[::-1]
@@ -213,33 +215,68 @@ def find_nearest_image(full_caption_embedding, images_embeddings):
     return indexes[0]
 
 
-def save_image_embedding():
+def load_image_embeddings_from_storage(image_name,
+                                       storage_config,
+                                       storage):
+    print("Loading image embeddings ...")
+    image_embs = []
+    image_paths = [
+        'STACMR_train/CTC/images/COCO_train2014_000000000036.jpg',
+        'STACMR_train/CTC/images/COCO_train2014_000000000109.jpg',
+        'STACMR_train/CTC/images/COCO_train2014_000000000151.jpg',
+        'STACMR_train/CTC/images/COCO_train2014_000000000260.jpg',
+        'STACMR_train/CTC/images/COCO_train2014_000000000368.jpg'
+    ]
+    for image_path in image_paths:
+        img_emb = inference_on_image(image_path=image_path,
+                                     storage=storage,
+                                     deeper=False)
+        image_embs.append(img_emb[0])
+
+    image_embeddings = np.stack(image_embs, axis=0)
+
+    return image_embeddings, image_paths
+
+
+def load_caption_embeddings_from_storage(caption_name,
+                                         storage_config,
+                                         storage):  # todo выпилить storage
+    print("Loading caption embeddings ...")
+    caption_embs = []
+    captions_list = [
+        "A woman posing for the camera, holding a pink, open umbrella and wearing a bright, floral, ruched bathing suit, by a life guard stand with lake, green trees, and a blue sky with a few clouds behind.",
+        "Very bad day is today",
+        "Dogs are my best friends",
+        "I love to eat wood",
+        "Such a wonderful night"
+    ]
+    for caption in captions_list:
+        cap_emb = inference_on_caption(caption=caption,
+                                       storage=storage,
+                                       deeper=False)
+        caption_embs.append(cap_emb[0])
+
+    captions_embeddings = np.stack(caption_embs, axis=0)
+
+    return captions_embeddings, captions_list
+
+
+def save_image_embedding_to_storage(image_embedding,
+                                    storage_config):
+    pass
+
+
+def save_caption_embedding_to_storage(image_embedding,
+                                      storage_config):
     pass
 
 
 def run_api(models_startup):
     # this is a test
     storage = init_preload_model_storage(models_startup)
-    print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
-    print(inference_on_caption('I love dogs', storage))
-    print(inference_generate_caption('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
+    # print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
+    print(inference_on_caption('Football match', storage))
+    # print(inference_generate_caption('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
 
-
-models_for_startup = {
-    'clip': {
-        'model_name': 'ViT-B/32',
-        'device': torch.device("cpu"),
-    },
-    'yolov5': {
-        'model_name': 'yolo_best.pt',
-        'device': torch.device("cpu"),
-    },
-    'vsrn': {
-        'model_name': 'runs/log/model_best.pth.tar',
-        'device': torch.device("cpu"),
-        'vocab_path': 'checkpoints_and_vocabs/f30k_precomp_vocab.pkl',
-        'params_config_path': 'inference_config.yaml',
-    },
-}
 
 run_api(models_for_startup)
