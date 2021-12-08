@@ -114,13 +114,10 @@ class VSRN(object):
         # labels = Variable(labels, volatile=False)
         # masks = Variable(masks, volatile=False)
 
-        # torch.cuda.synchronize()
-        labels = labels#.cuda()
-        masks = masks#.cuda()
-
-        # if torch.cuda.is_available():
-        #     labels.cuda()
-        #     masks.cuda()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            labels = labels.cuda()
+            masks = masks.cuda()
 
         seq_probs, _ = self.caption_model(fc_feats, labels, 'train')
         loss = self.crit(seq_probs, labels[:, 1:], masks[:, 1:])
