@@ -114,7 +114,7 @@ def get_dataloader(type, #train, eval, inference_images, inference_captions
                    vocab,
                    # transform,
                    batch_size=128,
-                   shuffle=False,
+                   shuffle=True,
                    num_workers=0):
     # if 'f8k' in data_name or 'f30k' in data_name:
     #     dataset = FlickrDataset(root=root,
