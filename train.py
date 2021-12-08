@@ -16,16 +16,16 @@ def main():
     train_loader = get_dataloader(
         type='train',
         annotations_map_name='checkpoints_and_vocabs/full_dataset_train_mapa_good.json',
-        image_embeddings_name='precomputed_embeddings/final_all_train_emb_CLIP_fp16.npy',
-        ocr_embeddings_name='precomputed_embeddings/final_all_train_emb_CLIP_fp16.npy',
+        image_embeddings_name='precomputed_embeddings/final_all_train_emb_CLIP_fixed.npy',
+        ocr_embeddings_name='precomputed_embeddings/final_all_train_emb_CLIP_fixed.npy',
         images_path='',
         vocab=vocab
     )
     val_loader = get_dataloader(
         type='eval',
         annotations_map_name='checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json',
-        image_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fp16.npy',
-        ocr_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fp16.npy',
+        image_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fixed.npy',
+        ocr_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fixed.npy',
         images_path='',
         vocab=vocab
     )
