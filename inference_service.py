@@ -3,6 +3,7 @@ import nltk
 import numpy as np
 import pickle
 import torch
+import embeddinghub as eh
 
 from VSRN import VSRN
 from Vocabulary import Vocabulary
@@ -15,6 +16,7 @@ from constants import models_for_startup, embeddings_storage_config
 
 
 def init_preload_model_storage(model_names_list):
+    hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
     storage = {}
     for model_type, item in model_names_list.items():
         if model_type == 'clip':
@@ -71,13 +73,13 @@ def init_preload_model_storage(model_names_list):
             storage[model_type]['vocab'] = vocab
             storage[model_type]['params'] = params
 
-    return storage
+    return storage, hub
 
 
 def inference_on_image(image_path,
                        storage,
-                       save_emb=False,
-                       deeper=True):
+                       hub,
+                       save_emb=True):
     model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
     model_yolov5 = storage['yolov5']['model']
     vsrn_model = storage['vsrn']['model']
@@ -86,7 +88,8 @@ def inference_on_image(image_path,
                                                  detected_regions,
                                                  model_clip,
                                                  preprocess_clip,
-                                                 torch.device("cpu"))  # todo Тут могут быть проблемы из-за захардкоженного девайса
+                                                 torch.device(
+                                                     "cpu"))  # todo Тут могут быть проблемы из-за захардкоженного девайса
     stacked_image_features = []
     for _ in range(MAX_DETECTIONS_PER_IMAGE):
         if _ < len(region_embeddings):
@@ -108,25 +111,29 @@ def inference_on_image(image_path,
         full_image_embedding, _ = vsrn_model.img_enc(region_embeddings, ocr_embeddings)
 
     if save_emb:
-        save_caption_embedding_to_storage(full_image_embedding,
-                                          embeddings_storage_config)  # todo Сделать сохранение эмбеддингов
+        save_caption_embedding_to_storage(image_path,
+                                          full_image_embedding,
+                                          hub)  # todo Сделать сохранение эмбеддингов
 
-    if deeper:
-        captions_embeddings, captions_list = load_caption_embeddings_from_storage(None,
-                                                                                  None,
-                                                                                  storage)  # todo Сделать загрузку из storage
+    # if deeper:
+    nearest_caption_id = find_nearest_caption(full_image_embedding, 1, hub)
 
-        nearest_caption_index = find_nearest_caption(full_image_embedding, captions_embeddings)
-
-        return captions_list[nearest_caption_index]
-    else:
-        return full_image_embedding
+    return nearest_caption_id
+    # captions_embeddings, captions_list = load_caption_embeddings_from_storage(None,
+    #                                                                           None,
+    #                                                                           storage)  # todo Сделать загрузку из storage
+    #
+    # nearest_caption_index = find_nearest_caption(full_image_embedding, captions_embeddings)
+    #
+    # return captions_list[nearest_caption_index]
+    # else:
+    #     return full_image_embedding
 
 
 def inference_on_caption(caption,
                          storage,
-                         save_emb=False,
-                         deeper=True):
+                         hub,
+                         save_emb=False):
     vsrn_model = storage['vsrn']['model']
     vsrn_vocab = storage['vsrn']['vocab']
     tokens = nltk.tokenize.word_tokenize(str(caption).lower())
@@ -140,16 +147,20 @@ def inference_on_caption(caption,
         encoded_caption = vsrn_model.txt_enc(caption.unsqueeze(0), [len(caption)])  # todo Тут бы проверить
 
     if save_emb:
-        save_caption_embedding_to_storage(encoded_caption,
-                                          embeddings_storage_config)
+        save_caption_embedding_to_storage(caption,
+                                          encoded_caption,
+                                          hub)
     # return encoded_caption  # todo это удалим
-    if deeper:
-        images_embeddings, image_paths = load_image_embeddings_from_storage(None, None, storage)
-        nearest_image_caption = find_nearest_image(encoded_caption, images_embeddings)
+    # if deeper:
+    nearest_image_id = find_nearest_caption(encoded_caption, 1, hub)
 
-        return image_paths[nearest_image_caption]
-    else:
-        return encoded_caption
+    return nearest_image_id
+    # images_embeddings, image_paths = load_image_embeddings_from_storage(None, None, storage)
+    # nearest_image_caption = find_nearest_image(encoded_caption, images_embeddings)
+    #
+    # return image_paths[nearest_image_caption]
+    # else:
+    #     return encoded_caption
 
 
 def inference_generate_caption(image_path,
@@ -165,7 +176,8 @@ def inference_generate_caption(image_path,
                                                  detected_regions,
                                                  model_clip,
                                                  preprocess_clip,
-                                                 torch.device("cpu"))  # todo Могут быть проблемы из-за захардкоженного девайса
+                                                 torch.device(
+                                                     "cpu"))  # todo Могут быть проблемы из-за захардкоженного девайса
     stacked_image_features = []
     for _ in range(MAX_DETECTIONS_PER_IMAGE):
         if _ < len(region_embeddings):
@@ -201,82 +213,99 @@ def inference_ocr(region_embeddings):  # todo Сделать OCR
     return np.zeros_like(region_embeddings)[:16, :300]
 
 
-def find_nearest_caption(full_image_embedding, captions_embeddings):
-    d = np.dot(full_image_embedding, captions_embeddings.T).flatten()
-    indexes = np.argsort(d)[::-1]
+def find_nearest_image(caption_embedding, number_of_neighbors, hub):
+    space = hub.get_space("image_embeddings")
+    neighbors = space.nearest_neigbhors(number_of_neighbors, vector=caption_embedding)
 
-    return indexes[0]
-
-
-def find_nearest_image(full_caption_embedding, images_embeddings):
-    d = np.dot(full_caption_embedding, images_embeddings.T).flatten()
-    indexes = np.argsort(d)[::-1]
-
-    return indexes[0]
+    return neighbors
 
 
-def load_image_embeddings_from_storage(image_name,
-                                       storage_config,
-                                       storage):
-    print("Loading image embeddings ...")
-    image_embs = []
-    image_paths = [
-        'STACMR_train/CTC/images/COCO_train2014_000000000036.jpg',
-        'STACMR_train/CTC/images/COCO_train2014_000000000109.jpg',
-        'STACMR_train/CTC/images/COCO_train2014_000000000151.jpg',
-        'STACMR_train/CTC/images/COCO_train2014_000000000260.jpg',
-        'STACMR_train/CTC/images/COCO_train2014_000000000368.jpg'
-    ]
-    for image_path in image_paths:
-        img_emb = inference_on_image(image_path=image_path,
-                                     storage=storage,
-                                     deeper=False)
-        image_embs.append(img_emb[0])
+def find_nearest_caption(image_embedding, number_of_neighbors, hub):
+    space = hub.get_space("caption_embeddings")
+    neighbors = space.nearest_neigbhors(number_of_neighbors, vector=image_embedding)
 
-    image_embeddings = np.stack(image_embs, axis=0)
-
-    return image_embeddings, image_paths
+    return neighbors
 
 
-def load_caption_embeddings_from_storage(caption_name,
-                                         storage_config,
-                                         storage):  # todo выпилить storage
-    print("Loading caption embeddings ...")
-    caption_embs = []
-    captions_list = [
-        "A woman posing for the camera, holding a pink, open umbrella and wearing a bright, floral, ruched bathing suit, by a life guard stand with lake, green trees, and a blue sky with a few clouds behind.",
-        "Very bad day is today",
-        "Dogs are my best friends",
-        "I love to eat wood",
-        "Such a wonderful night"
-    ]
-    for caption in captions_list:
-        cap_emb = inference_on_caption(caption=caption,
-                                       storage=storage,
-                                       deeper=False)
-        caption_embs.append(cap_emb[0])
-
-    captions_embeddings = np.stack(caption_embs, axis=0)
-
-    return captions_embeddings, captions_list
+def save_image_embedding_to_storage(image_id,
+                                    image_embedding,
+                                    hub):
+    space = hub.get_space("image_embeddings")
+    space.set(image_id, image_embedding)
 
 
-def save_image_embedding_to_storage(image_embedding,
-                                    storage_config):
-    pass
-
-
-def save_caption_embedding_to_storage(image_embedding,
-                                      storage_config):
-    pass
+def save_caption_embedding_to_storage(caption_id,
+                                      caption_embedding,
+                                      hub):
+    space = hub.get_space("caption_embeddings")
+    space.set(caption_id, caption_embedding)
 
 
 def run_api(models_startup):
     # this is a test
-    storage = init_preload_model_storage(models_startup)
-    # print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
-    print(inference_on_caption('Football match', storage))
+    storage, hub = init_preload_model_storage(models_startup)
+    print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage, hub))
+    print(inference_on_caption('Football match', storage, hub))
     # print(inference_generate_caption('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
 
 
 run_api(models_for_startup)
+
+# def find_nearest_caption(full_image_embedding, captions_embeddings):
+#     d = np.dot(full_image_embedding, captions_embeddings.T).flatten()
+#     indexes = np.argsort(d)[::-1]
+#
+#     return indexes[0]
+#
+#
+# def find_nearest_image(full_caption_embedding, images_embeddings):
+#     d = np.dot(full_caption_embedding, images_embeddings.T).flatten()
+#     indexes = np.argsort(d)[::-1]
+#
+#     return indexes[0]
+
+
+# def load_image_embeddings_from_storage(image_name,
+#                                        storage_config,
+#                                        storage):
+#     print("Loading image embeddings ...")
+#     image_embs = []
+#     image_paths = [
+#         'STACMR_train/CTC/images/COCO_train2014_000000000036.jpg',
+#         'STACMR_train/CTC/images/COCO_train2014_000000000109.jpg',
+#         'STACMR_train/CTC/images/COCO_train2014_000000000151.jpg',
+#         'STACMR_train/CTC/images/COCO_train2014_000000000260.jpg',
+#         'STACMR_train/CTC/images/COCO_train2014_000000000368.jpg'
+#     ]
+#     for image_path in image_paths:
+#         img_emb = inference_on_image(image_path=image_path,
+#                                      storage=storage,
+#                                      deeper=False)
+#         image_embs.append(img_emb[0])
+#
+#     image_embeddings = np.stack(image_embs, axis=0)
+#
+#     return image_embeddings, image_paths
+#
+#
+# def load_caption_embeddings_from_storage(caption_name,
+#                                          storage_config,
+#                                          storage):  # todo выпилить storage
+#     print("Loading caption embeddings ...")
+#     caption_embs = []
+#     captions_list = [
+#         "A woman posing for the camera, holding a pink, open umbrella and wearing a bright, floral, ruched bathing suit, by a life guard stand with lake, green trees, and a blue sky with a few clouds behind.",
+#         "Very bad day is today",
+#         "Dogs are my best friends",
+#         "I love to eat wood",
+#         "Such a wonderful night"
+#     ]
+#     for caption in captions_list:
+#         cap_emb = inference_on_caption(caption=caption,
+#                                        storage=storage,
+#                                        deeper=False)
+#         caption_embs.append(cap_emb[0])
+#
+#     captions_embeddings = np.stack(caption_embs, axis=0)
+#
+#     return captions_embeddings, captions_list
