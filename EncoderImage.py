@@ -247,8 +247,8 @@ class EncoderImagePrecompAttn(nn.Module):
 
         # IMAGE FEATURES
         fc_img_emd = self.fc(images)
-        if self.data_name != 'f30k_precomp' and False:  # todo check here
-            fc_img_emd = l2norm(fc_img_emd)
+        # if self.data_name != 'f30k_precomp' and False:  # todo check here
+        #     fc_img_emd = l2norm(fc_img_emd)
 
         # fc_img_emd = torch.cat((fc_img_emd, fc_scene_text), dim=1)
 
@@ -261,7 +261,7 @@ class EncoderImagePrecompAttn(nn.Module):
         GCN_img_emd = self.Rs_GCN_4(GCN_img_emd)
         # -> B,N,D
         GCN_img_emd = GCN_img_emd.permute(0, 2, 1)
-        GCN_img_emd = l2norm(GCN_img_emd)
+        # GCN_img_emd = l2norm(GCN_img_emd)
         visual_features = torch.mean(GCN_img_emd, dim=1)
         # rnn_img, hidden_state = self.img_rnn(GCN_img_emd)
         # visual_features = hidden_state[0]
@@ -292,12 +292,12 @@ class EncoderImagePrecompAttn(nn.Module):
 
         # features = torch.mean(GCN_img_emd, dim=1)
 
-        if self.data_name == 'f30k_precomp' or True:  # todo check here
-            features = self.bn(features)
+        # if self.data_name == 'f30k_precomp' or True:  # todo check here
+        #     features = self.bn(features)
 
         # normalize in the joint embedding space
-        if not self.no_imgnorm:
-            features = l2norm(features)
+        # if not self.no_imgnorm:
+        #     features = l2norm(features)
 
         # take the absolute value of embedding (used in order embeddings)
         if self.use_abs:
