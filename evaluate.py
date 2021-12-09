@@ -48,8 +48,8 @@ def evaluate(model_path):
     val_loader = get_dataloader(
         type='eval',
         annotations_map_name='checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json',
-        image_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fp16.npy',
-        ocr_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fp16.npy',
+        image_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fixed.npy',
+        ocr_embeddings_name='precomputed_embeddings/final_all_test_emb_CLIP_fixed.npy',
         images_path='',
         vocab=vocab
     )
@@ -77,4 +77,7 @@ def evaluate(model_path):
     print("Average t2i Recall: %.2f" % ari)
     print("Text to image: %.2f %.2f %.2f %.2f %.2f" % ri)
 
-    torch.save({'rt': rt, 'rti': rti}, 'ranks.pth.tar')
+    # torch.save({'rt': rt, 'rti': rti}, 'ranks.pth.tar')
+
+
+evaluate('checkpoints_and_vocabs/model_best1.pth.tar')
