@@ -1,11 +1,5 @@
-import sys
 import os
-import io
-import gc
-import warnings
-import pickle
-import streamlit as st
-import numpy as np
+import urllib
 from pathlib import Path
 from typing import List, Set, Dict, Union
 import clip
@@ -24,87 +18,177 @@ from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
 from prepare_image_regions_embeddings import CLIP_EMBEDDING_SIZE, MAX_DETECTIONS_PER_IMAGE
 from models.common import DetectMultiBackend
-from constants import models_for_startup, embeddings_storage_config
+from constants import models_for_startup
+import matplotlib.pyplot as plt
 
-from caption_utils import download_file_from_google_drive, load_models, image_load, image_process, get_captions
 
 ### PATHS
 UTILITIES_PATH = './utilities/'
 DATA_PATH = './data/'
-
-### PATHS TO MODELS
-CAPTION_MODEL_PATH = UTILITIES_PATH + 'caption_net.pth'
-CAPTION_MODEL_GDRIVE_ID = '1fgnUGsS1bl_lZk_cZP-FjJ1GwS5Sr4A7'
-INCEPTION_PATH = UTILITIES_PATH + 'bh_inception.pth'
-INCEPTION_GDRIVE_ID = '1ByN-JYRPyOYUXwvmhzz54-yfz8-aTpNC'
-
 TMP_DIR = UTILITIES_PATH + '/tmp/'
 TMP_IMG_PATH = TMP_DIR + 'img.jpg'
 
 
-# def find_nearest_images(caption_embedding, number_of_neighbors: int, hub = None, ) -> List[str]:
-# """return paths to images on disk or with which they might be downloaded"""
-# space = hub.get_space("image_embeddings")
-# neighbors = space.nearest_neighbors(number_of_neighbors, vector=caption_embedding)
-# return neighbors
+def image_load(img_path):
+    img = plt.imread(img_path)
+    return img
 
-# def find_nearest_captions(image_embedding, number_of_neighbors: int, hub = None) -> List[str]:
-# """return nearest captions itself"""
-# space = hub.get_space("caption_embeddings")
-# neighbors = space.nearest_neighbors(number_of_neighbors, vector=image_embedding)
-# return neighbors
 
-def find_nearest_images(caption_embedding, number_of_neighbors: int, hub=None, ) -> List[str]:
+def inference_ocr(region_embeddings):  # todo Сделать OCR
+    return np.zeros_like(region_embeddings)[:16, :300]
+
+
+def find_nearest_images(caption_embedding, number_of_neighbors: int, space) -> List[str]:
     """return paths to images on disk or with which they might be downloaded"""
-    space = hub.get_space("image_embeddings")
-    neighbors = space.nearest_neighbors(number_of_neighbors, vector=caption_embedding)
+    space.set("test", [float(item.item()) for item in caption_embedding[0]])
+    neighbors = space.nearest_neighbors(number_of_neighbors, key="test")
+    space.multidelete(["test"])
+
     return neighbors
 
 
-def find_nearest_captions(image_embedding, number_of_neighbors: int, hub=None) -> List[str]:
+def find_nearest_captions(image_embedding, number_of_neighbors: int, space) -> List[str]:
     """return nearest captions itself"""
-    space = hub.get_space("caption_embeddings")
-    neighbors = space.nearest_neighbors(number_of_neighbors, vector=image_embedding)
+    space.set("test", [float(item.item()) for item in image_embedding[0]])
+    neighbors = space.nearest_neighbors(number_of_neighbors, key="test")
+    space.multidelete(["test"])
+
     return neighbors
 
 
-def inference_on_caption(caption_text: str, storage: Dict) -> np.array:
-    return np.zeros(10)
+def inference_on_caption(caption,
+                         storage,
+                         save_emb=False):
+    caption = []
+    vsrn_model = storage['vsrn']['model']
+    vsrn_vocab = storage['vsrn']['vocab']
+    tokens = nltk.tokenize.word_tokenize(str(caption).lower())
 
+    caption.append(vsrn_vocab('<start>'))
+    caption.extend([vsrn_vocab(token) for token in tokens])
+    caption.append(vsrn_vocab('<end>'))
+    caption = torch.Tensor(caption).int()
+    with torch.no_grad():
+        encoded_caption = vsrn_model.txt_enc(caption.unsqueeze(0), [len(caption)])  # todo Тут бы проверить
 
-def inference_on_image(image: np.array, storage: Dict) -> np.array:
-    return np.zeros(10)
+    # if save_emb:
+    #     save_caption_embedding_to_storage(caption,
+    #                                       encoded_caption,
+    #                                       hub)
 
-
-def full_inference_on_image(image: np.array, n_top: int, storage: Dict) -> List[str]:
-    image, img_for_net, image_size_init = image_process(image)
-
-    captions = get_captions(
-        img_for_net,
-        storage['inception'], storage['caption_model'],
-        storage['idx2word'],
-        storage['EXCLUDE_FROM_PREDICTION'], (storage['BOS_IDX'],), storage['EOS_IDX'],
-        n_top,
-        storage['TEMPERATURE'], storage['SAMPLE'], storage['MAX_CAPTION_LEN']
-    )
-
-    return captions
+    return encoded_caption
 
 
 def get_images_by_text_query(text_query: str, n_top: int, storage: Dict) -> List[np.array]:
     # fetched_images = [f'fetched #{i + 1}' for i in range(N_TOP_RESULTS)]
 
-    # caption_embedding = inference_on_caption(text_query, storage)
-    # nearest_images = find_nearest_images(caption_embedding, n_top)
-    # fetched_images = [image_load(img_path) for img_path in nearest_images]
+    caption_embedding = inference_on_caption(text_query, storage)
+    nearest_images = find_nearest_images(caption_embedding, n_top, storage['hub']['image_space'])
+    fetched_images = [storage['hub']['ctc_map'][image_id]['image_url'] for image_id in nearest_images]
 
-    fetched_images = [image_load('default_image.jpg') for _ in range(n_top)]
+    loaded_images = []
+    for _, img_url in enumerate(fetched_images):
+        urllib.request.urlretrieve(img_url, 'image_example' + str(_) + '.jpg')
+        loaded_images.append(image_load('image_example' + str(_) + '.jpg'))
+    # fetched_images = [image_load('default_image.jpg') for _ in range(n_top)]
 
-    return fetched_images
+    return loaded_images
 
 
 def postprocess_caption(caption: str) -> str:
     return caption
+
+
+    # hub = storage['vsrn']['hub']
+    # caption_space = storage['vsrn']['model']
+    # ctc_map = storage['vsrn']['model']
+
+def inference_on_image(image_path,
+                       storage,
+                       save_emb=False):
+    model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
+    model_yolov5 = storage['yolov5']['model']
+    vsrn_model = storage['vsrn']['model']
+
+    detected_regions = inference_yolo_on_one_image(image_path, model_yolov5, torch.device("cpu"))
+    region_embeddings = inference_clip_one_image(image_path,
+                                                 detected_regions,
+                                                 model_clip,
+                                                 preprocess_clip,
+                                                 torch.device(
+                                                     "cpu"))  # todo Тут могут быть проблемы из-за захардкоженного девайса
+    stacked_image_features = []
+    for _ in range(MAX_DETECTIONS_PER_IMAGE):
+        if _ < len(region_embeddings):
+            stacked_image_features.append(region_embeddings[_])
+        else:
+            stacked_image_features.append(torch.zeros(CLIP_EMBEDDING_SIZE))
+    region_embeddings = np.stack([item.cpu() for item in stacked_image_features], axis=0)
+
+    ocr_embeddings = inference_ocr(region_embeddings)  # Тут должен быть массив размера 16 * 300
+
+    region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
+    ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
+    if torch.cuda.is_available():
+        region_embeddings = region_embeddings.cuda()
+        ocr_embeddings = ocr_embeddings.cuda()
+
+    # Forward
+    with torch.no_grad():
+        full_image_embedding, _ = vsrn_model.img_enc(region_embeddings, ocr_embeddings)
+
+    # if save_emb:
+    #     save_caption_embedding_to_storage(image_path,
+    #                                       full_image_embedding,
+    #                                       hub)  # todo Сделать сохранение эмбеддингов
+
+    return full_image_embedding
+
+
+def inference_generate_caption(image_path,
+                               storage,
+                               ntop):
+    model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
+    model_yolov5 = storage['yolov5']['model']
+    vsrn_model = storage['vsrn']['model']
+    vsrn_vocab = storage['vsrn']['vocab']
+
+    detected_regions = inference_yolo_on_one_image(image_path, model_yolov5, torch.device("cpu"))
+    region_embeddings = inference_clip_one_image(image_path,
+                                                 detected_regions,
+                                                 model_clip,
+                                                 preprocess_clip,
+                                                 torch.device(
+                                                     "cpu"))  # todo Могут быть проблемы из-за захардкоженного девайса
+    stacked_image_features = []
+    for _ in range(MAX_DETECTIONS_PER_IMAGE):
+        if _ < len(region_embeddings):
+            stacked_image_features.append(region_embeddings[_])
+        else:
+            stacked_image_features.append(torch.zeros(CLIP_EMBEDDING_SIZE))
+    region_embeddings = np.stack([item.cpu() for item in stacked_image_features], axis=0)
+    ocr_embeddings = inference_ocr(region_embeddings)
+
+    region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
+    ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
+    if torch.cuda.is_available():
+        region_embeddings = region_embeddings.cuda()
+        ocr_embeddings = ocr_embeddings.cuda()
+
+    # Forward
+    with torch.no_grad():
+        img_emb, GCN_img_emd = vsrn_model.img_enc(region_embeddings, ocr_embeddings)
+
+    seq_logprobs, seq_preds = vsrn_model.caption_model(GCN_img_emd, None, 'inference')
+    # (region_embeddings, ocr_embeddings)  # todo попробовать от общего эмбеддинга
+
+    sentence = []
+    for letter in seq_preds[0]:
+        sentence.append(vsrn_vocab.idx2word[letter.item()])
+
+    generated_caption = ' '.join(sentence)
+
+    return generated_caption
 
 
 def get_captions_by_image(image_input: Union[str, Path], n_top: int, storage: Dict, retrieve: bool, ) -> List[str]:
@@ -112,11 +196,12 @@ def get_captions_by_image(image_input: Union[str, Path], n_top: int, storage: Di
     image_input ideally should be local path to image
     """
     if retrieve:
-        image_embedding = inference_on_image(image, storage)
-        nearest_captions = find_nearest_captions(image_embedding, n_top)
+        image_embedding = inference_on_image(image_input, storage)
+        nearest_captions = find_nearest_captions(image_embedding, n_top, None)
+        # nearest_captions = find_nearest_captions(image_embedding, n_top, storage['hub']['caption_space'])
     else:
-        image = load_image(image_input)
-        nearest_captions = full_inference_on_image(image, n_top, storage)
+        # image = load_image(image_input)
+        nearest_captions = inference_generate_caption(image_input, storage, n_top)
     fetched_captions = [postprocess_caption(caption) for caption in nearest_captions]
 
     return fetched_captions
@@ -136,7 +221,8 @@ st.title('Multimodal Search Demo')
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, show_spinner=False)
 def init_preload_model_storage(model_names_list):
     hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
-    space = hub.get_space("ctc_image_embs5")
+    image_space = hub.get_space("ctc_image_embs5")
+    # caption_space = hub.get_space("ctc_caption_embs5")
     with open('CTC_image_name_mapa_new.json', 'r') as f:
         ctc_map = json.load(f)
     storage = {}
@@ -195,7 +281,13 @@ def init_preload_model_storage(model_names_list):
             storage[model_type]['vocab'] = vocab
             storage[model_type]['params'] = params
 
-    return storage, hub, space, ctc_map
+    storage['hub'] = {}
+    storage['hub']['hub'] = hub
+    storage['hub']['image_space'] = image_space
+    # storage['hub']['caption_space'] = caption_space
+    storage['hub']['ctc_map'] = ctc_map
+
+    return storage
 
 
 @st.cache(suppress_st_warning=True, ttl=3600, max_entries=1, show_spinner=False)
@@ -231,15 +323,12 @@ def save_image(img):
 
 
 def main():
-    download, pseudo_inception = True, False
-    #
-    # storage = instantiate(download, pseudo_inception)
-    storage, hub, space, ctc_map = init_preload_model_storage(models_startup)
+    storage = init_preload_model_storage(models_for_startup)
 
     spinner_slot = st.empty()
     load_status_slot = st.empty()
 
-    left, right = st.beta_columns((1, 1))
+    left, right = st.columns((1, 1))
     with left:
         image_slot = st.empty()
         image_uploader_slot = st.empty()
