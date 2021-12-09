@@ -3,11 +3,12 @@ import nltk
 import numpy as np
 import pickle
 import torch
+import json
 import streamlit as st
-# import embeddinghub as eh
+import embeddinghub as eh
 
 from VSRN import VSRN
-# from Vocabulary import Vocabulary
+from Vocabulary import Vocabulary
 from dao import get_config
 from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
@@ -18,7 +19,10 @@ from constants import models_for_startup, embeddings_storage_config
 
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, show_spinner=False)
 def init_preload_model_storage(model_names_list):
-    # hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
+    hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
+    space = hub.get_space("ctc_image_embs5")
+    with open('CTC_image_name_mapa_new.json', 'r') as f:
+        ctc_map = json.load(f)
     storage = {}
     for model_type, item in model_names_list.items():
         if model_type == 'clip':
@@ -75,13 +79,15 @@ def init_preload_model_storage(model_names_list):
             storage[model_type]['vocab'] = vocab
             storage[model_type]['params'] = params
 
-    return storage#, hub
+    return storage, hub, space, ctc_map
 
 
 def inference_on_image(image_path,
                        storage,
                        hub,
-                       save_emb=True):
+                       space,
+                       ctc_map,
+                       save_emb=False):
     model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
     model_yolov5 = storage['yolov5']['model']
     vsrn_model = storage['vsrn']['model']
@@ -118,23 +124,16 @@ def inference_on_image(image_path,
                                           hub)  # todo Сделать сохранение эмбеддингов
 
     # if deeper:
-    nearest_caption_id = find_nearest_caption(full_image_embedding, 1, hub)
+    nearest_caption_ids = find_nearest_caption(full_image_embedding, 3, space, ctc_map)
 
-    return nearest_caption_id
-    # captions_embeddings, captions_list = load_caption_embeddings_from_storage(None,
-    #                                                                           None,
-    #                                                                           storage)  # todo Сделать загрузку из storage
-    #
-    # nearest_caption_index = find_nearest_caption(full_image_embedding, captions_embeddings)
-    #
-    # return captions_list[nearest_caption_index]
-    # else:
-    #     return full_image_embedding
+    return nearest_caption_ids
 
 
 def inference_on_caption(caption,
                          storage,
                          hub,
+                         space,
+                         ctc_map,
                          save_emb=False):
     vsrn_model = storage['vsrn']['model']
     vsrn_vocab = storage['vsrn']['vocab']
@@ -152,17 +151,10 @@ def inference_on_caption(caption,
         save_caption_embedding_to_storage(caption,
                                           encoded_caption,
                                           hub)
-    # return encoded_caption  # todo это удалим
-    # if deeper:
-    nearest_image_id = find_nearest_caption(encoded_caption, 1, hub)
 
-    return nearest_image_id
-    # images_embeddings, image_paths = load_image_embeddings_from_storage(None, None, storage)
-    # nearest_image_caption = find_nearest_image(encoded_caption, images_embeddings)
-    #
-    # return image_paths[nearest_image_caption]
-    # else:
-    #     return encoded_caption
+    nearest_image_ids = find_nearest_image(encoded_caption, 3, space, ctc_map)
+
+    return nearest_image_ids
 
 
 def inference_generate_caption(image_path,
@@ -215,16 +207,18 @@ def inference_ocr(region_embeddings):  # todo Сделать OCR
     return np.zeros_like(region_embeddings)[:16, :300]
 
 
-def find_nearest_image(caption_embedding, number_of_neighbors, hub):
-    space = hub.get_space("image_embeddings")
-    neighbors = space.nearest_neigbhors(number_of_neighbors, vector=caption_embedding)
+def find_nearest_caption(image_embedding, number_of_neighbors, space, ctc_map):
+    space.set("test", [float(item.item()) for item in image_embedding[0]])
+    neighbors = space.nearest_neighbors(number_of_neighbors, key="test")
+    space.multidelete(["test"])
 
     return neighbors
 
 
-def find_nearest_caption(image_embedding, number_of_neighbors, hub):
-    space = hub.get_space("caption_embeddings")
-    neighbors = space.nearest_neigbhors(number_of_neighbors, vector=image_embedding)
+def find_nearest_image(caption_embedding, number_of_neighbors, space, ctc_map):
+    space.set("test", [float(item.item()) for item in caption_embedding[0]])
+    neighbors = space.nearest_neighbors(number_of_neighbors, key="test")
+    space.multidelete(["test"])
 
     return neighbors
 
@@ -246,9 +240,9 @@ def save_caption_embedding_to_storage(caption_id,
 def run_api(models_startup):
     pass
     # this is a test
-    # storage, hub = init_preload_model_storage(models_startup)
+    storage, hub, space, ctc_map = init_preload_model_storage(models_startup)
     # print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage, hub))
-    # print(inference_on_caption('Football match', storage, hub))
+    print(inference_on_caption('Football match', storage, hub, space, ctc_map))
     # print(inference_generate_caption('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
 
 
