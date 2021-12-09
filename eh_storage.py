@@ -10,7 +10,7 @@ ctc_map = load_from_json('checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good
 data = {}
 data_set = {}
 img_emb = np.load('saved_embs_CTC.npy')
-for item, emb in (ctc_map, img_emb):
+for item, emb in zip(ctc_map, img_emb):
     image_sp = item['image_path'].split('/')
     image_name = image_sp[-1]#.lower()
     image_source = image_sp[0].lower()
