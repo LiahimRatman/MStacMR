@@ -3,10 +3,11 @@ import nltk
 import numpy as np
 import pickle
 import torch
-import embeddinghub as eh
+import streamlit as st
+# import embeddinghub as eh
 
 from VSRN import VSRN
-from Vocabulary import Vocabulary
+# from Vocabulary import Vocabulary
 from dao import get_config
 from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
@@ -15,8 +16,9 @@ from models.common import DetectMultiBackend
 from constants import models_for_startup, embeddings_storage_config
 
 
+@st.cache(suppress_st_warning=True, allow_output_mutation=True, show_spinner=False)
 def init_preload_model_storage(model_names_list):
-    hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
+    # hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
     storage = {}
     for model_type, item in model_names_list.items():
         if model_type == 'clip':
@@ -73,7 +75,7 @@ def init_preload_model_storage(model_names_list):
             storage[model_type]['vocab'] = vocab
             storage[model_type]['params'] = params
 
-    return storage, hub
+    return storage#, hub
 
 
 def inference_on_image(image_path,
@@ -242,10 +244,11 @@ def save_caption_embedding_to_storage(caption_id,
 
 
 def run_api(models_startup):
+    pass
     # this is a test
-    storage, hub = init_preload_model_storage(models_startup)
-    print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage, hub))
-    print(inference_on_caption('Football match', storage, hub))
+    # storage, hub = init_preload_model_storage(models_startup)
+    # print(inference_on_image('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage, hub))
+    # print(inference_on_caption('Football match', storage, hub))
     # print(inference_generate_caption('STACMR_train/CTC/images/COCO_train2014_000000000036.jpg', storage))
 
 
