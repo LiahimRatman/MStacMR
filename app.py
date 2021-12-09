@@ -59,10 +59,10 @@ def find_nearest_captions(image_embedding, number_of_neighbors: int, space) -> L
 def inference_on_caption(caption,
                          storage,
                          save_emb=False):
-    caption = []
     vsrn_model = storage['vsrn']['model']
     vsrn_vocab = storage['vsrn']['vocab']
     tokens = nltk.tokenize.word_tokenize(str(caption).lower())
+    caption = []
 
     caption.append(vsrn_vocab('<start>'))
     caption.extend([vsrn_vocab(token) for token in tokens])
