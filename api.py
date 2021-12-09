@@ -34,7 +34,7 @@ def load_image(img):
 
 
 def main():
-    storage = init_preload_model_storage(models_for_startup)
+    storage, hub, space, ctc_map = init_preload_model_storage(models_for_startup)
 
     spinner_slot = st.empty()
     left, right = st.beta_columns((1, 1))
