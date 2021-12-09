@@ -4,7 +4,7 @@ import torch
 from VSRN import VSRN
 from dao import get_config
 from data import get_dataloader
-from search_service import encode_data, i2t, t2i
+from search_service import encode_data, i2t, t2i, get_i2t_retrieval_scores, get_t2i_retrieval_scores
 from Vocabulary import Vocabulary
 
 
@@ -59,15 +59,15 @@ def evaluate(model_path):
     print('Images: %d, Captions: %d' %
           (img_embs.shape[0] / 5, cap_embs.shape[0]))
 
-    # no cross-validation, full evaluation
-    r, rt = i2t(img_embs,
+    r, rt = get_i2t_retrieval_scores(img_embs,
                 cap_embs,
-                measure=params['measure'],
+                similarity_measure=params['measure'],
                 return_ranks=True)
-    ri, rti = t2i(img_embs,
+    ri, rti = get_t2i_retrieval_scores(img_embs,
                   cap_embs,
-                  measure=params['measure'],
+                  similarity_measure=params['measure'],
                   return_ranks=True)
+
     ar = (r[0] + r[1] + r[2]) / 3
     ari = (ri[0] + ri[1] + ri[2]) / 3
     rsum = r[0] + r[1] + r[2] + ri[0] + ri[1] + ri[2]

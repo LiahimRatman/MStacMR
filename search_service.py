@@ -138,6 +138,104 @@ def t2i(images, captions, npts=None, measure='cosine', return_ranks=False):
         return (r1, r5, r10, medr, meanr)
 
 
+def get_i2t_retrieval_scores(images, captions, similarity_measure='cosine', captions_per_image=5, return_ranks=False):
+    """
+    """
+    n_unique_images = int(images.shape[0] / captions_per_image)
+
+    ranks = np.zeros(n_unique_images)
+    top1 = np.zeros(n_unique_images)
+
+    for index in tqdm(range(n_unique_images)):
+        # get query image (every 'captions_per_image'th item in embeddings)
+        queries = images[captions_per_image * index].reshape(1, images.shape[1])
+
+        # similarities
+        if similarity_measure == 'cosine':
+            d = np.dot(queries, captions.T).flatten()  ### (n_captions_total, )
+        else:
+            raise NotImplementedError
+
+        # returns the indices that would sort an array decreasing
+        indices_decreasing = np.argsort(d)[::-1]
+
+        # ranking - for all true captions related to this image selecting minimal rank
+        rank = np.inf
+        for i in range(captions_per_image * index, captions_per_image * (index + 1), 1):
+            ### looking how high the current caption index in the argsorted indices
+            current_rank = np.where(indices_decreasing == i)[0][0]
+            ### actual position of relevant caption in all ranked captions
+            ### taking the highest among all captions_per_image relevant
+            if current_rank < rank:
+                rank = current_rank
+        if np.isinf(rank):
+            raise ValueError("how did that happen?")
+
+        ranks[index] = rank  ### highest rank for relevant captions for image
+        top1[index] = indices_decreasing[0]  ### which was the actual closest caption
+
+    # compute recall@k metrics
+    r1 = 100.0 * len(np.where(ranks < 1)[0]) / len(ranks)
+    r5 = 100.0 * len(np.where(ranks < 5)[0]) / len(ranks)
+    r10 = 100.0 * len(np.where(ranks < 10)[0]) / len(ranks)
+    ### +1 cause indexation above from 0
+    median_rank = np.floor(np.median(ranks)) + 1
+    mean_rank = ranks.mean() + 1
+
+    if return_ranks:
+        return (r1, r5, r10, median_rank, mean_rank), (ranks, top1)
+    return (r1, r5, r10, median_rank, mean_rank)
+
+
+def get_t2i_retrieval_scores(images, captions, similarity_measure='cosine', captions_per_image=5, return_ranks=False,
+                             return_aggregated=False):
+    n_unique_images = int(images.shape[0] / captions_per_image)
+    images_unique = np.array([images[i] for i in range(0, len(images), captions_per_image)])
+
+    ranks_aggregated = np.zeros(n_unique_images)
+    ranks_singles = np.zeros(captions_per_image * n_unique_images)
+    top1 = np.zeros(captions_per_image * n_unique_images)
+
+    for index in tqdm(range(n_unique_images)):
+
+        # for every image get relevant query captions
+        queries = captions[captions_per_image * index: captions_per_image * (index + 1)]
+
+        # similarities between every of captions_per_image caption and all images
+        if similarity_measure == 'cosine':
+            d = np.dot(queries, images_unique.T)
+        else:
+            raise NotImplementedError
+
+        indices = np.zeros(d.shape)
+
+        for i in range(len(indices)):
+            # returns the indices that would sort an array decreasing
+            indices[i] = np.argsort(d[i])[::-1]
+            ### looking how high the current image index in the argsorted indices
+            ranks_singles[captions_per_image * index + i] = np.where(indices[i] == index)[0][0]
+            top1[captions_per_image * index + i] = indices[i][0]
+
+        ranks_aggregated[index] = np.min(ranks_singles[captions_per_image * index: captions_per_image * (index + 1)])
+
+    # compute recall@k metrics
+    if return_aggregated:
+        ranks = ranks_aggregated
+    else:
+        ranks = ranks_singles
+
+    r1 = 100.0 * len(np.where(ranks < 1)[0]) / len(ranks)
+    r5 = 100.0 * len(np.where(ranks < 5)[0]) / len(ranks)
+    r10 = 100.0 * len(np.where(ranks < 10)[0]) / len(ranks)
+    ### +1 cause indexation above from 0
+    median_rank = np.floor(np.median(ranks)) + 1
+    mean_rank = ranks.mean() + 1
+
+    if return_ranks:
+        return (r1, r5, r10, median_rank, mean_rank), (ranks, top1)
+    return (r1, r5, r10, median_rank, mean_rank)
+
+
 def encode_data(model, data_loader, log_step=10):
     """
     Encode all images and captions loadable by `data_loader`
