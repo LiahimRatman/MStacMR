@@ -202,7 +202,14 @@ def get_captions_by_image(image_input: Union[str, Path], n_top: int, storage: Di
     """
     if retrieve:
         image_embedding = inference_on_image(image_input, storage)
-        nearest_captions = find_nearest_captions(image_embedding, n_top, None)
+
+        d = np.dot(image_embedding, storage['cap_embs'].T)
+        inds = np.zeros(d.shape)
+        for i in range(len(inds)):
+            inds[i] = np.argsort(d[i])[::-1]
+        nearest_captions = [storage['names'][int(ii) // 5]['captions'][int(ii) % 5] for ii in list(inds[0][:n_top])]
+
+        # nearest_captions = find_nearest_captions(image_embedding, n_top, None)
         # nearest_captions = find_nearest_captions(image_embedding, n_top, storage['hub']['caption_space'])
     else:
         # image = load_image(image_input)
@@ -228,6 +235,7 @@ def init_preload_model_storage(model_names_list):
     hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
     image_space = hub.get_space("ctc_image_embs5")
     img_embs = np.load('save_npy_new.npy')
+    cap_embs = np.load('save_npy_new_cap.npy')
     names = load_from_json('checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json')
     # caption_space = hub.get_space("ctc_caption_embs5")
     with open('CTC_image_name_mapa_new.json', 'r') as f:
@@ -295,6 +303,7 @@ def init_preload_model_storage(model_names_list):
     storage['hub']['ctc_map'] = ctc_map
     storage['names'] = names
     storage['embs'] = img_embs
+    storage['cap_embs'] = cap_embs
 
     return storage
 
