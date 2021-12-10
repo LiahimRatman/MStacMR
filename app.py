@@ -1,32 +1,31 @@
 import os
 import urllib
 from pathlib import Path
-from typing import List, Set, Dict, Union
+from typing import List, Dict, Union
 import clip
 import nltk
 import numpy as np
+import matplotlib.pyplot as plt
 import pickle
 import torch
-import json
 import streamlit as st
 import embeddinghub as eh
 
-from VSRN import VSRN
 from Vocabulary import Vocabulary
-from dao import get_config, load_from_json
+from utilities import get_config, load_from_json
+from model import create_model_from_config
+
 from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
-from prepare_image_regions_embeddings import CLIP_EMBEDDING_SIZE, MAX_DETECTIONS_PER_IMAGE
 from models.common import DetectMultiBackend
-from constants import models_for_startup
-import matplotlib.pyplot as plt
 
+### DETECTION | EMBEDDING PARAMS
+MAX_DETECTIONS_PER_IMAGE = 36
+CLIP_EMBEDDING_SIZE = 512
 
 ### PATHS
-UTILITIES_PATH = './utilities/'
-DATA_PATH = './data/'
-TMP_DIR = UTILITIES_PATH + '/tmp/'
-TMP_IMG_PATH = TMP_DIR + 'img.jpg'
+TEMP_DIR = './tmpdir/'
+CONFIG_PATH = 'full_config_nested.yaml'
 
 
 def image_load(img_path):
@@ -56,72 +55,42 @@ def find_nearest_captions(image_embedding, number_of_neighbors: int, space) -> L
     return neighbors
 
 
-def inference_on_caption(caption,
-                         storage,
-                         save_emb=False):
+def inference_on_caption(caption, storage, save_emb=False):
     vsrn_model = storage['vsrn']['model']
     vsrn_vocab = storage['vsrn']['vocab']
     tokens = nltk.tokenize.word_tokenize(str(caption).lower())
-    caption = []
 
+    caption = []
     caption.append(vsrn_vocab('<start>'))
     caption.extend([vsrn_vocab(token) for token in tokens])
     caption.append(vsrn_vocab('<end>'))
     caption = torch.Tensor(caption).int()
     with torch.no_grad():
-        encoded_caption = vsrn_model.txt_enc(caption.unsqueeze(0), [len(caption)])  # todo Тут бы проверить
+        encoded_caption = vsrn_model.text_encoder(caption.unsqueeze(0), [len(caption)])
 
     # if save_emb:
-    #     save_caption_embedding_to_storage(caption,
-    #                                       encoded_caption,
-    #                                       hub)
+    #     save_caption_embedding_to_storage(caption, encoded_caption,hub)
 
     return encoded_caption
-
-
-def get_images_by_text_query(text_query: str, n_top: int, storage: Dict) -> List[np.array]:
-    # fetched_images = [f'fetched #{i + 1}' for i in range(N_TOP_RESULTS)]
-
-    caption_embedding = inference_on_caption(text_query, storage)
-    d = np.dot(caption_embedding, storage['embs'].T)
-    inds = np.zeros(d.shape)
-    for i in range(len(inds)):
-        inds[i] = np.argsort(d[i])[::-1]
-    fetched_images = ['http://images.cocodataset.org/train2014/' + storage['names'][int(ii)]['image_path'].split('/')[-1] for ii in list(inds[0][:n_top])]
-    # nearest_images = find_nearest_images(caption_embedding, n_top, storage['hub']['image_space'])
-    # fetched_images = [storage['hub']['ctc_map'][image_id]['image_url'] for image_id in nearest_images]
-
-    loaded_images = []
-    for _, img_url in enumerate(fetched_images):
-        urllib.request.urlretrieve(img_url, 'image_example' + str(_) + '.jpg')
-        loaded_images.append(image_load('image_example' + str(_) + '.jpg'))
-    # fetched_images = [image_load('default_image.jpg') for _ in range(n_top)]
-
-    return loaded_images
 
 
 def postprocess_caption(caption: str) -> str:
     return caption
 
 
-    # hub = storage['vsrn']['hub']
-    # caption_space = storage['vsrn']['model']
-    # ctc_map = storage['vsrn']['model']
-
-def inference_on_image(image_path,
-                       storage,
-                       save_emb=False):
+def inference_on_image(image_path, storage, save_emb=False, return_no_ocr_embedding=False):
     model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
     model_yolov5 = storage['yolov5']['model']
     vsrn_model = storage['vsrn']['model']
 
     detected_regions = inference_yolo_on_one_image(image_path, model_yolov5, torch.device("cpu"))
-    region_embeddings = inference_clip_one_image(image_path,
-                                                 detected_regions,
-                                                 model_clip,
-                                                 preprocess_clip,
-                                                 torch.device(
-                                                     "cpu"))  # todo Тут могут быть проблемы из-за захардкоженного девайса
+    region_embeddings = inference_clip_one_image(
+        image_path,
+        detected_regions,
+        model_clip,
+        preprocess_clip,
+        torch.device("cpu"),
+    )
     stacked_image_features = []
     for _ in range(MAX_DETECTIONS_PER_IMAGE):
         if _ < len(region_embeddings):
@@ -140,60 +109,32 @@ def inference_on_image(image_path,
 
     # Forward
     with torch.no_grad():
-        full_image_embedding, _ = vsrn_model.img_enc(region_embeddings, ocr_embeddings)
+        full_image_embedding, no_ocr_embedding = vsrn_model.image_encoder(region_embeddings, ocr_embeddings)
 
     # if save_emb:
-    #     save_caption_embedding_to_storage(image_path,
-    #                                       full_image_embedding,
-    #                                       hub)  # todo Сделать сохранение эмбеддингов
+    #     save_caption_embedding_to_storage(image_path, full_image_embedding, hub)
+
+    if return_no_ocr_embedding:
+        return full_image_embedding, no_ocr_embedding
 
     return full_image_embedding
 
 
-def inference_generate_caption(image_path,
-                               storage,
-                               ntop):
-    model_clip, preprocess_clip = storage['clip']['model'], storage['clip']['preprocess']
-    model_yolov5 = storage['yolov5']['model']
+def inference_generate_caption(image_path, storage, n_top):
+    full_image_embedding, no_ocr_embedding = inference_on_image(image_path, storage, return_no_ocr_embedding=True)
+
     vsrn_model = storage['vsrn']['model']
     vsrn_vocab = storage['vsrn']['vocab']
+    generated_captions = []
+    for _ in range(n_top):
+        seq_logprobs, seq_preds = vsrn_model.caption_model(no_ocr_embedding, None, 'inference')
+        # todo попробовать от общего эмбеддинга
+        sentence = []
+        for letter in seq_preds[0]:
+            sentence.append(vsrn_vocab.idx2word[letter.item()])
+        generated_captions.append(' '.join(sentence))
 
-    detected_regions = inference_yolo_on_one_image(image_path, model_yolov5, torch.device("cpu"))
-    region_embeddings = inference_clip_one_image(image_path,
-                                                 detected_regions,
-                                                 model_clip,
-                                                 preprocess_clip,
-                                                 torch.device(
-                                                     "cpu"))  # todo Могут быть проблемы из-за захардкоженного девайса
-    stacked_image_features = []
-    for _ in range(MAX_DETECTIONS_PER_IMAGE):
-        if _ < len(region_embeddings):
-            stacked_image_features.append(region_embeddings[_])
-        else:
-            stacked_image_features.append(torch.zeros(CLIP_EMBEDDING_SIZE))
-    region_embeddings = np.stack([item.cpu() for item in stacked_image_features], axis=0)
-    ocr_embeddings = inference_ocr(region_embeddings)
-
-    region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
-    ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
-    if torch.cuda.is_available():
-        region_embeddings = region_embeddings.cuda()
-        ocr_embeddings = ocr_embeddings.cuda()
-
-    # Forward
-    with torch.no_grad():
-        img_emb, GCN_img_emd = vsrn_model.img_enc(region_embeddings, ocr_embeddings)
-
-    seq_logprobs, seq_preds = vsrn_model.caption_model(GCN_img_emd, None, 'inference')
-    # (region_embeddings, ocr_embeddings)  # todo попробовать от общего эмбеддинга
-
-    sentence = []
-    for letter in seq_preds[0]:
-        sentence.append(vsrn_vocab.idx2word[letter.item()])
-
-    generated_caption = ' '.join(sentence)
-
-    return generated_caption
+    return generated_captions
 
 
 def get_captions_by_image(image_input: Union[str, Path], n_top: int, storage: Dict, retrieve: bool, ) -> List[str]:
@@ -203,14 +144,15 @@ def get_captions_by_image(image_input: Union[str, Path], n_top: int, storage: Di
     if retrieve:
         image_embedding = inference_on_image(image_input, storage)
 
-        d = np.dot(image_embedding, storage['cap_embs'].T)
-        inds = np.zeros(d.shape)
-        for i in range(len(inds)):
-            inds[i] = np.argsort(d[i])[::-1]
-        nearest_captions = [storage['names'][int(ii) // 5]['captions'][int(ii) % 5] for ii in list(inds[0][:n_top])]
-
         # nearest_captions = find_nearest_captions(image_embedding, n_top, None)
         # nearest_captions = find_nearest_captions(image_embedding, n_top, storage['hub']['caption_space'])
+
+        d = np.dot(image_embedding, storage['caption_embeddings'].T)
+        indices = np.zeros(d.shape)
+        for i in range(len(indices)):
+            indices[i] = np.argsort(d[i])[::-1]
+        nearest_captions = [storage['names'][int(ii) // 5]['captions'][int(ii) % 5] for ii in list(indices[0][:n_top])]
+
     else:
         # image = load_image(image_input)
         nearest_captions = inference_generate_caption(image_input, storage, n_top)
@@ -219,10 +161,37 @@ def get_captions_by_image(image_input: Union[str, Path], n_top: int, storage: Di
     return fetched_captions
 
 
+def get_images_by_text_query(text_query: str, n_top: int, storage: Dict) -> List[np.array]:
+    caption_embedding = inference_on_caption(text_query, storage)
+
+    # nearest_images = find_nearest_images(caption_embedding, n_top, storage['hub']['image_space'])
+
+    d = np.dot(caption_embedding, storage['image_embeddings'].T)
+    indices = np.zeros(d.shape)
+    for i in range(len(indices)):
+        indices[i] = np.argsort(d[i])[::-1]
+
+    base_url = 'http://images.cocodataset.org/train2014/'
+    fetched_images = [base_url + storage['names'][int(ii)]['image_path'].split('/')[-1] for ii in
+                      list(indices[0][:n_top])]
+
+    # fetched_images = [storage['ctc_map'][image_id]['image_url'] for image_id in nearest_images]
+
+    loaded_images = []
+    for i, img_url in enumerate(fetched_images):
+        f_name = f'image_example{i}.jpg'
+        urllib.request.urlretrieve(img_url, f_name)
+        loaded_images.append(image_load(f_name))
+
+    # fetched_images = [image_load('default_image.jpg') for _ in range(n_top)]
+
+    return loaded_images
+
+
 new_image = False
 
 st.set_page_config(
-    page_title='Small, but awesome image captioning tool demo',
+    page_title='Small, but awesome multimodal search tool demo',
     page_icon=None,
     layout='wide',
     initial_sidebar_state='expanded'
@@ -231,81 +200,65 @@ st.title('Multimodal Search Demo')
 
 
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, show_spinner=False)
-def init_preload_model_storage(model_names_list):
-    hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
-    image_space = hub.get_space("ctc_image_embs5")
-    img_embs = np.load('save_npy_new.npy')
-    cap_embs = np.load('save_npy_new_cap.npy')
-    names = load_from_json('checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json')
-    # caption_space = hub.get_space("ctc_caption_embs5")
-    with open('CTC_image_name_mapa_new.json', 'r') as f:
-        ctc_map = json.load(f)
+def instantiate():
     storage = {}
-    for model_type, item in model_names_list.items():
-        if model_type == 'clip':
-            storage[model_type] = {}
-            clip_model, clip_preprocess = clip.load(item['model_name'])
-            storage[model_type]['model'] = clip_model.to(item['device']).eval()
-            storage[model_type]['preprocess'] = clip_preprocess
-            input_resolution = clip_model.visual.input_resolution
-            context_length = clip_model.context_length
-            vocab_size = clip_model.vocab_size
-            print("CLIP Model parameters:", f"{np.sum([int(np.prod(p.shape)) for p in clip_model.parameters()]):,}")
-            print("CLIP Input resolution:", input_resolution)
-            print("CLIP Context length:", context_length)
-            print("CLIP Vocab size:", vocab_size)
-        elif model_type == 'yolov5':
-            storage[model_type] = {}
-            yolov5_model = DetectMultiBackend(item['model_name'], device=item['device'], dnn=False)
-            storage[model_type]['model'] = yolov5_model
-        elif model_type == 'vsrn':
-            storage[model_type] = {}
-            checkpoint = torch.load(item['model_name'], map_location="cpu")
-            vocab = pickle.load(open('checkpoints_and_vocabs/f30k_precomp_vocab.pkl', 'rb'))
-            params = get_config('inference_config.yaml')
-            params['vocab_size'] = len(vocab)
-            vsrn_model = VSRN(params['grad_clip'],
-                              params['image_embedding_dim'],
-                              params['gcn_embedding_size'],
-                              params['vocab_size'],
-                              params['caption_encoder_word_dim'],
-                              params['caption_encoder_num_layers'],
-                              params['caption_encoder_embedding_size'],
-                              params['dim_vid'],
-                              # todo вероятно это то же самое, что и gcn_embedding_size, но надо проверить
-                              params['dim_caption_generation_hidden'],
-                              params['input_dropout_p_caption_generation_enc'],
-                              params['rnn_type_caption_generation_enc'],
-                              params['rnn_dropout_p_caption_generation_enc'],
-                              params['bidirectional_enc'],
-                              params['max_caption_len'],
-                              params['dim_word_caption_generation'],
-                              params['input_dropout_p_caption_generation_dec'],
-                              params['rnn_type_caption_generation_dec'],
-                              params['rnn_dropout_p_caption_generation_dec'],
-                              params['bidirectional_dec'],
-                              params['margin'],
-                              params['measure'],
-                              params['max_violation'],
-                              params['learning_rate'])
 
-            vsrn_model.load_state_dict(checkpoint['model'])
-            vsrn_model.val_start()
-
-            storage[model_type]['model'] = vsrn_model
-            storage[model_type]['vocab'] = vocab
-            storage[model_type]['params'] = params
+    hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
+    # image_space = hub.get_space("ctc_image_embs5")
+    # caption_space = hub.get_space("ctc_caption_embs5")
 
     storage['hub'] = {}
     storage['hub']['hub'] = hub
-    storage['hub']['image_space'] = image_space
+    # storage['hub']['image_space'] = image_space
     # storage['hub']['caption_space'] = caption_space
-    storage['hub']['ctc_map'] = ctc_map
+
+    ctc_map = load_from_json('checkpoints_and_vocabs/CTC_image_name_mapa_new.json')
+    names = load_from_json('checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json')
+    image_embeddings = np.load('checkpoints_and_vocabs/embedded_images.npy')
+    caption_embeddings = np.load('checkpoints_and_vocabs/embedded_captions.npy')
+
+    storage['ctc_map'] = ctc_map
     storage['names'] = names
-    storage['embs'] = img_embs
-    storage['cap_embs'] = cap_embs
+    storage['caption_embeddings'] = caption_embeddings
+    storage['image_embeddings'] = image_embeddings
+
+    config = get_config(CONFIG_PATH)
+    device = config.get('device', 'cpu')
+    vocab = pickle.load(open(config['training_params']['vocab_path'], 'rb'))
+
+    # 'clip'    
+    storage['clip'] = {}
+    clip_model, clip_preprocess = clip.load(config['clip']['model_name'])
+    storage['clip']['model'] = clip_model.to(device).eval()
+    storage['clip']['preprocess'] = clip_preprocess
+
+    # 'yolov5'
+    storage['yolov5'] = {}
+    yolov5_model = DetectMultiBackend(config['yolov5']['model_name'], device=device, dnn=False)
+    storage['yolov5']['model'] = yolov5_model
+
+    # 'vsrn':
+    storage['vsrn'] = {}
+    vsrn_model = create_model_from_config(config)
+    vsrn_model.eval()
+    storage['vsrn']['model'] = vsrn_model
+    storage['vsrn']['vocab'] = vocab
+
+    print('all models initialized')
 
     return storage
+
+
+def save_image(img, path='saved_image.jpg'):
+    if not os.path.exists(TEMP_DIR):
+        os.makedirs(TEMP_DIR)
+    img_path = TEMP_DIR + path
+    img_bytes = img.read()
+    with open(img_path, 'wb') as f:
+        f.write(img_bytes)
+    print(f'saving image to {img_path}')
+
+    return img_path
 
 
 @st.cache(suppress_st_warning=True, ttl=3600, max_entries=1, show_spinner=False)
@@ -318,30 +271,14 @@ def load_image(img):
     elif isinstance(img, np.ndarray):
         return img
     else:
-        img_bytes = img.read()
-        if not os.path.exists(TMP_DIR):
-            os.mkdir(TMP_DIR)
-        with open(TMP_IMG_PATH, 'wb') as f:
-            f.write(img_bytes)
+        img_path = save_image(img, 'uploaded_image.jpg')
         # image = image_load(io.BytesIO(img_bytes))
-        image = image_load(TMP_IMG_PATH)
+        image = image_load(img_path)
     return image
 
 
-def save_image(img):
-    if not os.path.exists(TMP_DIR):
-        os.mkdir(TMP_DIR)
-    img_path = TMP_DIR + 'saved_image.jpg'
-
-    img_bytes = img.read()
-    with open(img_path, 'wb') as f:
-        f.write(img_bytes)
-
-    return img_path
-
-
 def main():
-    storage = init_preload_model_storage(models_for_startup)
+    storage = instantiate()
 
     spinner_slot = st.empty()
     load_status_slot = st.empty()
@@ -370,19 +307,19 @@ def main():
         ### trying to load image
         is_loaded = False
         img_uploaded = image_uploader_slot.file_uploader(label='Upload your image in .jpg format', type=['jpg', 'jpeg'])
-        ### img_uploaded is an object .read() on which returns bytes
+        ### img_uploaded is an object, .read() on which returns bytes
 
         if img_uploaded:
             img = load_image(img_uploaded)
             img_path = save_image(img_uploaded)
             is_loaded = True
-            image_slot.image(img, use_column_width=False, width=600)
+            image_slot.image(img, use_column_width=False, width=500)
             if new_image:
                 load_status_slot.success('Image loaded!')
             # image_uploader_slot.empty()
     else:
         text_query = caption_slot.text_input(
-            label='Type your query to search for image with:',
+            label='Type your query to search for images with:',
             value="", max_chars=None,
             key=None, type="default",
         )
@@ -437,7 +374,7 @@ def main():
                 )
                 spinner_slot.empty()
                 caption_slot.header('Is this what you were searching for?')
-                caption_slot.markdown('  \n'.join(fetched_captions))
+                caption_slot.text(f'\n{"-" * 60}\n'.join(fetched_captions))
             else:
                 warning_slot.warning('Please, upload your image first')
 
@@ -454,16 +391,15 @@ def main():
                 )
                 spinner_slot.empty()
                 image_slot.header('Is this what you were searching for?')
-                # image_slot.image(fetched_images[0]) ### only first one for now
                 with image_slot:
                     fetched_image_slot = st.empty()
                     fetched_image_slot.image(
                         fetched_images, use_column_width=False,
-                        width=300 if len(fetched_images) > 1 else 600,
+                        width=300 if len(fetched_images) > 1 else 500,
                     )
 
             else:
-                warning_slot.warning('Please, provide the text query you want to search')
+                warning_slot.warning('Please, provide the text query you want to search with')
 
     authors_slot.markdown(
         """\
