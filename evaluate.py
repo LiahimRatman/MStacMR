@@ -59,6 +59,19 @@ def evaluate(model_path):
     print('Images: %d, Captions: %d' %
           (img_embs.shape[0] / 5, cap_embs.shape[0]))
 
+    # print(img_embs)
+    #
+    # import numpy as np
+    # list_ = []
+    # for _, image_emb in enumerate(img_embs):
+    #     if _ % 5 == 0:
+    #         list_.append(image_emb)
+    # res = np.stack(list_, axis=0)
+    # print(res.shape)
+    # print(res)
+    # np.save('save_npy_new.npy', res)
+    # np.save('save_npy_new_cap.npy', cap_embs)
+
     r, rt = get_i2t_retrieval_scores(img_embs,
                 cap_embs,
                 similarity_measure=params['measure'],
