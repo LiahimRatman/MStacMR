@@ -11,7 +11,7 @@ models_for_startup = {
         'device': torch.device("cpu"),
     },
     'vsrn': {
-        'model_name': 'runs/log/model_best.pth.tar',
+        'model_name': 'checkpoints_and_vocabs/model_best1.pth.tar',
         'device': torch.device("cpu"),
         'vocab_path': 'checkpoints_and_vocabs/f30k_precomp_vocab.pkl',
         'params_config_path': 'inference_config.yaml',

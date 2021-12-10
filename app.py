@@ -13,7 +13,7 @@ import embeddinghub as eh
 
 from VSRN import VSRN
 from Vocabulary import Vocabulary
-from dao import get_config
+from dao import get_config, load_from_json
 from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
 from prepare_image_regions_embeddings import CLIP_EMBEDDING_SIZE, MAX_DETECTIONS_PER_IMAGE
@@ -83,8 +83,13 @@ def get_images_by_text_query(text_query: str, n_top: int, storage: Dict) -> List
     # fetched_images = [f'fetched #{i + 1}' for i in range(N_TOP_RESULTS)]
 
     caption_embedding = inference_on_caption(text_query, storage)
-    nearest_images = find_nearest_images(caption_embedding, n_top, storage['hub']['image_space'])
-    fetched_images = [storage['hub']['ctc_map'][image_id]['image_url'] for image_id in nearest_images]
+    d = np.dot(caption_embedding, storage['embs'].T)
+    inds = np.zeros(d.shape)
+    for i in range(len(inds)):
+        inds[i] = np.argsort(d[i])[::-1]
+    fetched_images = ['http://images.cocodataset.org/train2014/' + storage['names'][int(ii)]['image_path'].split('/')[-1] for ii in list(inds[0][:n_top])]
+    # nearest_images = find_nearest_images(caption_embedding, n_top, storage['hub']['image_space'])
+    # fetched_images = [storage['hub']['ctc_map'][image_id]['image_url'] for image_id in nearest_images]
 
     loaded_images = []
     for _, img_url in enumerate(fetched_images):
@@ -222,6 +227,8 @@ st.title('Multimodal Search Demo')
 def init_preload_model_storage(model_names_list):
     hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
     image_space = hub.get_space("ctc_image_embs5")
+    img_embs = np.load('save_npy_new.npy')
+    names = load_from_json('checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json')
     # caption_space = hub.get_space("ctc_caption_embs5")
     with open('CTC_image_name_mapa_new.json', 'r') as f:
         ctc_map = json.load(f)
@@ -286,6 +293,8 @@ def init_preload_model_storage(model_names_list):
     storage['hub']['image_space'] = image_space
     # storage['hub']['caption_space'] = caption_space
     storage['hub']['ctc_map'] = ctc_map
+    storage['names'] = names
+    storage['embs'] = img_embs
 
     return storage
 
@@ -328,7 +337,7 @@ def main():
     spinner_slot = st.empty()
     load_status_slot = st.empty()
 
-    left, right = st.columns((1, 1))
+    left, right = st.beta_columns((1, 1))
     with left:
         image_slot = st.empty()
         image_uploader_slot = st.empty()
