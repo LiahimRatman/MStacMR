@@ -11,7 +11,8 @@
 /checkpoints_and_vocabs/*.json
 /checkpoints_and_vocabs/*.pt
 /checkpoints_and_vocabs/*.pkl
-/yolov5l.pt
-/yolo_best.pt
+/precomputed_embeddings/yolov5l.pt
+/precomputed_embeddings/yolo_best.pt
 /YOLOv5_train/YOLOv5_model
 /runs
+eh_storage.py
