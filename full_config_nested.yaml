@@ -31,7 +31,7 @@ image_encoder_params:
     ocr_box_dim: 300
     use_abs: false
     use_bn: true  # Exp 1
-    use_l2norm: true  # Exp 1
+    use_l2norm: false
     use_l2norm_final: true  # Exp 1
     use_ocr_emb: true   
 caption_encoder_params:
