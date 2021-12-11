@@ -1,9 +1,10 @@
+import os
 import torch
 
 import pickle
 from Vocabulary import Vocabulary
 from EncoderImage import EncoderImage
-from EncoderText import EncoderText
+from EncoderText import EncoderText, TextEncoder
 from caption_models.DecoderRNN import DecoderRNN
 from caption_models.EncoderRNN import EncoderRNN
 from caption_models.S2VTAttModel import S2VTAttModel
@@ -36,12 +37,18 @@ def create_model_from_config(config):
         use_ocr_emb=config['image_encoder_params']['use_ocr_emb'],
     )
 
-    text_encoder = EncoderText(
-        vocab_size=len(vocab),
-        word_dim=config['caption_encoder_params']['caption_encoder_word_dim'],
-        embed_size=config['caption_encoder_params']['caption_encoder_embedding_dim'],
-        num_layers=config['caption_encoder_params']['caption_encoder_num_layers'],
-        device=device,
+    # text_encoder = EncoderText(
+    #     vocab_size=len(vocab),
+    #     word_dim=config['caption_encoder_params']['caption_encoder_word_dim'],
+    #     embed_size=config['caption_encoder_params']['caption_encoder_embedding_dim'],
+    #     num_layers=config['caption_encoder_params']['caption_encoder_num_layers'],
+    #     device=device,
+    # )
+
+    text_encoder = TextEncoder(
+        encoder_path=config['caption_encoder_params']['encoder_path'],
+        output_dim=config['caption_encoder_params']['output_dim'],
+        max_caption_len=config['caption_encoder_params']['max_caption_len'],
     )
 
     caption_model = S2VTAttModel(

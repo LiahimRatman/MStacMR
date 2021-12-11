@@ -5,15 +5,16 @@ import numpy as np
 from tqdm.auto import tqdm
 
 
-def encode_data(model, dataloader, device='cpu'):
+# def encode_data(model, dataloader, device='cpu'):
+def encode_data(model, dataloader):
     """
     encodes all images and captions from `dataloader`
     used for validation
     """
 
     # switch to evaluate mode
-    model = model.to(device)
     model.eval()
+    # model = model.to(device)
 
     # numpy arrays to keep all the embeddings
     img_embs, cap_embs = None, None
@@ -27,14 +28,15 @@ def encode_data(model, dataloader, device='cpu'):
         # caption tokens' indices (truncated of padded up to max_len),
         # caption mask (the same but mask),
         # scene text embeddings (N_st)
-        for (images, captions, lengths, ids, caption_labels, caption_masks, scene_texts) in tqdm(dataloader):
+        for (ids, images, ocr_features, tokenizer_outputs, captions, lengths, caption_labels, caption_masks) in tqdm(dataloader):
 
-            images = images.to(device)
-            captions = captions.to(device)
-            scene_texts = scene_texts.to(device)
+            # images = images.to(device)
+            # captions = captions.to(device)
+            # tokenizer_outputs = tokenizer_outputs.to(device)
+            # scene_texts = scene_texts.to(device)
+
             # compute the embeddings
-            img_emb, cap_emb, GCN_img_emd = model.forward_emb(images, captions, lengths, scene_texts)
-
+            img_emb, cap_emb, GCN_img_emb = model.forward_emb(images, ocr_features, tokenizer_outputs, captions, lengths)
             # initialize the numpy arrays given the size of the embeddings
             if img_embs is None:
                 img_embs = np.zeros((len(dataloader.dataset), img_emb.size(1)))
@@ -49,7 +51,7 @@ def encode_data(model, dataloader, device='cpu'):
 
 def evaluate(model, dataloader, similarity_measure='cosine', captions_per_image=5):
     # compute the encoding for all the validation images and captions
-    img_embs, cap_embs = encode_data(model, dataloader, model.device)
+    img_embs, cap_embs = encode_data(model, dataloader,)
 
     # caption retrieval
     eval_res_i2t, ranks_i2t = get_i2t_retrieval_scores(
