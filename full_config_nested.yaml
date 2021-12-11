@@ -13,8 +13,8 @@ training_params:
     eval_img_emb_path: 'precomputed_embeddings/final_all_test_emb_CLIP_fixed.npy'
     eval_ocr_emb_path: 'precomputed_embeddings/final_all_test_emb_CLIP_fixed.npy'
     vocab_path: 'checkpoints_and_vocabs/f30k_precomp_vocab.pkl'
-    learning_rate: 0.0002
-    lr_update: 15
+    learning_rate: 0.001  # Exp 2
+    lr_update: 30  # Exp 2
     num_epochs: 30
     batch_size: 128
     grad_clip: 2.0
@@ -30,9 +30,9 @@ image_encoder_params:
     num_ocr_boxes: 16
     ocr_box_dim: 300
     use_abs: false
-    use_bn: true
-    use_l2norm: true
-    use_l2norm_final: true
+    use_bn: true  # Exp 1
+    use_l2norm: true  # Exp 1
+    use_l2norm_final: true  # Exp 1
     use_ocr_emb: true   
 caption_encoder_params:
     caption_encoder_num_layers: 1

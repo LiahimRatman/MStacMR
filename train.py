@@ -17,8 +17,8 @@ from Vocabulary import Vocabulary
 from model import create_model_from_config
 
 INFERENCE_CONFIG_PATH = 'inference_config_nested.yaml'
-MODEL_CONFIG_PATH = 'full_config_nested.yaml'
-CHECKPOINTS_DIR_PATH = 'checkpoints/'
+MODEL_CONFIG_PATH = 'full_config_nested.yaml'  # TODO get from args
+CHECKPOINTS_DIR_PATH = 'checkpoints/'  # TODO get from args
 
 
 def make_checkpoint(model, current_epoch, current_score, best_score, dir_path):
