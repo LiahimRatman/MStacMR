@@ -30,9 +30,9 @@ image_encoder_params:
     num_ocr_boxes: 16
     ocr_box_dim: 300
     use_abs: false
-    use_bn: false
-    use_l2norm: false
-    use_l2norm_final: false
+    use_bn: true
+    use_l2norm: true
+    use_l2norm_final: true
     use_ocr_emb: true   
 caption_encoder_params:
     caption_encoder_num_layers: 1
