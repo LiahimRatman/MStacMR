@@ -140,7 +140,7 @@ class VSRN:
             self.weight_caption_loss * caption_loss
         )
 
-        # print(f"Loss: {loss}, caption loss: {caption_loss}, retrieval loss: {retrieval_loss}")
+        print(f"Loss: {loss}, caption loss: {caption_loss}, retrieval loss: {retrieval_loss}")
 
         # compute gradient and make optimizer step
         self.optimizer.zero_grad()
