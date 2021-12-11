@@ -49,6 +49,7 @@ def create_model_from_config(config):
         encoder_path=config['caption_encoder_params']['encoder_path'],
         output_dim=config['caption_encoder_params']['output_dim'],
         max_caption_len=config['caption_encoder_params']['max_caption_len'],
+        use_l2norm_final=config['caption_encoder_params']['use_l2norm_final'],
     )
 
     caption_model = S2VTAttModel(

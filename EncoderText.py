@@ -19,15 +19,17 @@ class TextEncoder(nn.Module):
         freeze_encoder = True,
         output_dim = 512,
         max_caption_len = 100,
+        use_l2norm_final = True,
         *args, **kwargs,
     ):
         super(TextEncoder, self).__init__()
-        self.encoder_path = Path(os.path.abspath(encoder_path.rstrip('/')))
-        # self.encoder_path = encoder_path
+        # self.encoder_path = Path(os.path.abspath(encoder_path.rstrip('/')))
+        self.encoder_path = encoder_path
         # print(self.encoder_path)
         self.encoder = AutoModel.from_pretrained(self.encoder_path)
         self.encoder_tokenizer = AutoTokenizer.from_pretrained(self.encoder_path)
         self.max_caption_len = max_caption_len
+        self.use_l2norm_final = use_l2norm_final
 
         if freeze_encoder:
             for param in self.encoder.parameters():
@@ -53,12 +55,14 @@ class TextEncoder(nn.Module):
             return_tensors='pt',
         ).to(self.encoder.device)
 
-        # tokenizer_outputs.to(self.device)
-
         encoder_output = self.encoder(**encoder_input) ### lots of stuff
         embeddings = encoder_output.pooler_output ### batch_size x hid_dim
         embeddings = self.fc(embeddings) ### batch_size x hid_dim
         embeddings = self.activation(embeddings)
+
+        if self.use_l2norm_final:
+            embeddings = l2norm(embeddings)
+
         return embeddings
 
 

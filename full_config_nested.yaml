@@ -1,17 +1,19 @@
-device: 'cpu'
+device: 'cuda'
 yolov5:
     model_name: 'checkpoints_and_vocabs/yolo_best.pt'
 clip:
     model_name: 'ViT-B/32'
-use_checkpoint: false
-checkpoint_path: 'checkpoints_and_vocabs/model_best1.pth.tar'
+use_checkpoint: true
+#checkpoint_path: 'checkpoints_and_vocabs/best_model.pth'
+#checkpoint_path: 'checkpoints_and_vocabs/800_checkpoint.pth'
 training_params:
-    train_annot_map_path: 'checkpoints_and_vocabs/full_dataset_train_mapa_good.json'
-    train_img_emb_path: 'precomputed_embeddings/final_all_train_emb_CLIP_fixed.npy'
-    train_ocr_emb_path: 'precomputed_embeddings/final_all_train_emb_CLIP_fixed.npy'
-    eval_annot_map_path: 'checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json'
-    eval_img_emb_path: 'precomputed_embeddings/final_all_test_emb_CLIP_fixed.npy'
-    eval_ocr_emb_path: 'precomputed_embeddings/final_all_test_emb_CLIP_fixed.npy'
+    checkpoints_saving_path: 'checkpoints_and_vocabs/'
+    train_annot_map_path: 'checkpoints_and_vocabs/annotation_map_ctc1k.json'
+    train_img_emb_path: 'precomp_embeddings/CLIP_fp16_ctc1k.npy'
+    train_ocr_emb_path: 'precomp_embeddings/CLIP_fp16_ctc1k.npy'
+    eval_annot_map_path: 'checkpoints_and_vocabs/annotation_map_ctc1k.json'
+    eval_img_emb_path: 'precomp_embeddings/CLIP_fp16_ctc1k.npy'
+    eval_ocr_emb_path: 'precomp_embeddings/CLIP_fp16_ctc1k.npy'
     vocab_path: 'checkpoints_and_vocabs/f30k_precomp_vocab.pkl'
     learning_rate: 0.0002
     lr_update: 15
@@ -35,9 +37,15 @@ image_encoder_params:
     use_l2norm_final: false
     use_ocr_emb: true   
 caption_encoder_params:
-    caption_encoder_num_layers: 1
-    caption_encoder_word_dim: 300  # caption embedding size
-    caption_encoder_embedding_dim: 512
+    #encoder_path: 'checkpoints_and_vocabs/labse_ru_en'
+    encoder_path: 'cointegrated/LaBSE-en-ru'
+    freeze_encoder: false
+    output_dim: 512
+    max_caption_len: 100
+    use_l2norm_final: false
+#    caption_encoder_num_layers: 1
+#    caption_encoder_word_dim: 300  # caption embedding size
+#    caption_encoder_embedding_dim: 512
 caption_generator_params:
     dim_vid: 512  # было 2048, подозреваю, что это много
     dim_caption_generation_hidden: 512  # мб теперь надо поменять
