@@ -66,7 +66,7 @@ class FullDataset:
         self.vocab = vocab
         
         if self.use_precomputed_embeddings:
-            self.precomputed_image_embeddings = np.load(self.image_embeddings_path)
+            self.precomputed_image_embeddings = np.load(self.image_embeddings_path)[:, :16, :]
             ocr_dummy = np.zeros(
                 (self.precomputed_image_embeddings.shape[0], max_ocr_regions, 300),
                 dtype='float16'
