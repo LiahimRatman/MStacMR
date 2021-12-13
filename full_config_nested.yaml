@@ -37,7 +37,7 @@ image_encoder_params:
 caption_encoder_params:
     caption_encoder_num_layers: 1
     caption_encoder_word_dim: 300  # caption embedding size
-    caption_encoder_embedding_dim: 512
+    caption_encoder_embedding_dim: 1024
 caption_generator_params:
     dim_vid: 512  # было 2048, подозреваю, что это много
     dim_caption_generation_hidden: 512  # мб теперь надо поменять

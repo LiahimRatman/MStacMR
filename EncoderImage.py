@@ -104,6 +104,8 @@ class EncoderImagePrecompAttn(nn.Module):
         """Extract image feature vectors."""
 
         # IMAGE FEATURES
+        images_full = images[:, 0, :]
+        images = images[:, 1:, :]
         fc_img_emd = self.fc(images)
 
         if self.use_l2norm:
@@ -124,6 +126,7 @@ class EncoderImagePrecompAttn(nn.Module):
         if self.use_l2norm:
             GCN_img_emd = l2norm(GCN_img_emd)
         visual_features = torch.mean(GCN_img_emd, dim=1)
+        visual_features = torch.concat([images_full, visual_features], axis=1)
         ### using AvgPool above instead rnn
         # rnn_img, hidden_state = self.img_rnn(GCN_img_emd)
         # visual_features = hidden_state[0]
@@ -157,7 +160,8 @@ class EncoderImagePrecompAttn(nn.Module):
         # FINAL AGGREGATION
         if self.use_ocr_emb:
             ### why multiplying..?
-            features = torch.mul(visual_features, fc_scene_text) + visual_features
+            # features = torch.mul(visual_features, fc_scene_text) + visual_features  # todo вернуть когда будет ocr
+            features = visual_features
         else:
             features = visual_features
 
