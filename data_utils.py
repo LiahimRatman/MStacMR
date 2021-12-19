@@ -67,12 +67,12 @@ class FullDataset:
         
         if self.use_precomputed_embeddings:
             self.precomputed_image_embeddings = np.load(self.image_embeddings_path)
-            ocr_dummy = np.zeros(
-                (self.precomputed_image_embeddings.shape[0], max_ocr_regions, 300),
-                dtype='float16'
-            )
-            # self.precomputed_ocr_embeddings = np.load(self.ocr_embeddings_path)
-            self.precomputed_ocr_embeddings = ocr_dummy
+            # ocr_dummy = np.zeros(
+            #     (self.precomputed_image_embeddings.shape[0], max_ocr_regions, 300),
+            #     dtype='float16'
+            # )
+            # self.precomputed_ocr_embeddings = ocr_dummy
+            self.precomputed_ocr_embeddings = np.load(self.ocr_embeddings_path)
 
         self.annotation_map = load_from_json(self.annotation_map_path)
         assert len(self.precomputed_image_embeddings) == len(self.annotation_map)
