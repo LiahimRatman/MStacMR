@@ -1,19 +1,19 @@
 device: 'cpu'
 yolov5:
-    model_name: '../data/checkpoints_and_vocabs/yolo_best.pt'
+    model_name: '../all_data/checkpoints_and_vocabs/yolo_best.pt'
 clip:
     model_name: 'ViT-B/32'
 use_checkpoint: false
-checkpoint_path: 'checkpoints/model_best.pth'
+checkpoint_path: '../all_data/checkpoints/best_model.pth'
 training_params:
-    train_annot_map_path: '../data/checkpoints_and_vocabs/full_dataset_train_mapa_good.json'
-    train_img_emb_path: '../data/precomputed_embeddings/final_all_train_emb_CLIP_new1.npy'
-    train_ocr_emb_path: '../data/precomputed_embeddings/final_all_train_ocr_muse_emb_0.npy'
-    eval_annot_map_path: '../data/checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json'
-    eval_img_emb_path: '../data/precomputed_embeddings/final_all_test_emb_CLIP_new1.npy'
-    eval_ocr_emb_path: '../data/precomputed_embeddings/final_all_test_CTC_ocr_muse_emb_0.npy'
-    vocab_path: '../data/checkpoints_and_vocabs/f30k_precomp_vocab.pkl'
-    muse_path: '../data/labse_ru_en'
+    train_annot_map_path: '../all_data/checkpoints_and_vocabs/full_dataset_train_mapa_good.json'
+    train_img_emb_path: '../all_data/precomputed_embeddings/final_all_train_emb_CLIP_new1.npy'
+    train_ocr_emb_path: '../all_data/precomputed_embeddings/final_all_train_ocr_muse_emb_11.npy'
+    eval_annot_map_path: '../all_data/checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json'
+    eval_img_emb_path: '../all_data/precomputed_embeddings/final_all_test_emb_CLIP_new1.npy'
+    eval_ocr_emb_path: '../all_data/precomputed_embeddings/final_all_test_CTC_ocr_muse_emb_11.npy'
+    vocab_path: '../all_data/checkpoints_and_vocabs/f30k_precomp_vocab.pkl'
+    muse_path: '../all_data/labse_ru_en'
     raw_images_path: '../STACMR_train'
     learning_rate: 0.0002
     lr_update: 15
@@ -30,7 +30,7 @@ image_encoder_params:
     image_embedding_dim: 512
     gcn_embedding_dim: 512
     num_ocr_boxes: 16
-    ocr_box_dim: 300
+    ocr_box_dim: 512
     use_abs: false
     use_bn: false
     use_l2norm: false
@@ -42,7 +42,7 @@ caption_encoder_params:
     caption_encoder_num_layers: 1
     caption_encoder_word_dim: 300  # caption embedding size
     caption_encoder_embedding_dim: 512
-caption_gener ator_params:
+caption_generator_params:
     dim_vid: 512  # было 2048, подозреваю, что это много
     dim_caption_generation_hidden: 512  # мб теперь надо поменять
     input_dropout_p_caption_generation_enc: 0.2

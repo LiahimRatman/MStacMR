@@ -192,7 +192,7 @@ class Pipeline:
             inference.
     """
 
-    def __init__(self, detector=None, recognizer=None, scale=2, max_size=2048):
+    def __init__(self, detector=None, recognizer=None, scale=2, max_size=1000):
         if detector is None:
             detector = detection.Detector()
         if recognizer is None:
@@ -234,6 +234,7 @@ class Pipeline:
             detection_kwargs = {}
         if recognition_kwargs is None:
             recognition_kwargs = {}
+        # with tf.device(device):
         box_groups = self.detector.detect(images=images, **detection_kwargs)
         prediction_groups, pipe_all_scores = self.recognizer.recognize_from_boxes(
             images=images, box_groups=box_groups, device=device, **recognition_kwargs

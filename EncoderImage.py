@@ -71,6 +71,7 @@ class EncoderImagePrecompAttn(nn.Module):
         self.use_l2norm = use_l2norm
         self.use_l2norm_final = use_l2norm_final
         self.use_ocr_emb = use_ocr_emb
+        self.use_gcn_scene_text_emb = use_gcn_scene_text_emb
 
         self.fc = nn.Linear(img_dim, embed_dim)
 
@@ -156,7 +157,7 @@ class EncoderImagePrecompAttn(nn.Module):
             fc_scene_text = torch.mean(GCN_scene_text_emd, dim=1)
         
         ### this is weird too
-        # fc_scene_text = torch.mean(fc_scene_text, dim=1)
+        fc_scene_text = torch.mean(fc_scene_text, dim=1)
 
         # FINAL AGGREGATION
         if self.use_ocr_emb:
