@@ -42,7 +42,7 @@ image_encoder_params:
 caption_encoder_params:
     encoder_path: 'checkpoints_and_vocabs/labse_ru_en'
     #encoder_path: 'cointegrated/LaBSE-en-ru'
-    freeze_encoder: true
+    freeze_encoder: false
     output_dim: 512
     max_caption_len: 100
     use_l2norm_final: true

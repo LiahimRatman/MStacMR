@@ -110,8 +110,8 @@ class EncoderImagePrecompAttn(nn.Module):
         # IMAGE FEATURES
         fc_img_emd = self.fc(images)
 
-        if self.use_l2norm:
-            fc_img_emd = l2norm(fc_img_emd)
+        # if self.use_l2norm:
+        #     fc_img_emd = l2norm(fc_img_emd)
 
         ### WTF is this here?
         # fc_img_emd = torch.cat((fc_img_emd, fc_scene_text), dim=1)

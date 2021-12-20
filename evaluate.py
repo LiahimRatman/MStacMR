@@ -19,9 +19,11 @@ def run_evaluation(config):
         annotation_map_path=config['training_params']['eval_annot_map_path'],
         image_embeddings_path=config['training_params']['eval_img_emb_path'],
         ocr_embeddings_path=config['training_params']['eval_ocr_emb_path'],
+        encoder_tokenizer_path=config['caption_encoder_params']['encoder_path'],
         vocab=vocab,
         shuffle=False,
         batch_size=config['training_params']['batch_size'],
+        num_image_boxes=config['image_encoder_params']['num_image_boxes'],
     )
 
     similarity_measure = config['loss_params']['measure']
