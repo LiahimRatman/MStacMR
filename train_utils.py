@@ -6,6 +6,7 @@ from torch.autograd import Variable
 def l2norm(X):
     """L2-normalize columns of X"""
     norm = torch.pow(X, 2).sum(dim=1, keepdim=True).sqrt()
+    norm = torch.where(norm > 0., norm, torch.ones_like(norm))
     X = torch.div(X, norm)
 
     return X

@@ -1,10 +1,7 @@
 import nltk
 import numpy as np
 import torch
-import transformers
-from transformers import AutoTokenizer, AutoModel
-from transformers import BatchEncoding
-
+from transformers import AutoTokenizer, AutoModel, BatchEncoding
 from collections import defaultdict
 
 from utilities import load_from_json
@@ -246,25 +243,3 @@ def get_dataloader_img_ocr_precalculated(
     )
 
     return dataloader
-
-
-class InferenceImagesEncodeDataset:
-    def __init__(self, inference_images_path):
-        self.inference_images_path = inference_images_path
-
-    def __getitem__(self, index):
-        pass
-
-    def __len__(self):
-        pass
-
-
-class InferenceCaptionsEncodeDataset:
-    def __init__(self, inference_texts_path):
-        self.inference_texts_path = inference_texts_path
-
-    def __getitem__(self, index):
-        pass
-
-    def __len__(self):
-        pass
