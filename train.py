@@ -85,6 +85,7 @@ def run_train_loop(config, dir_path = None):
         vocab=vocab,
         shuffle=True,
         batch_size=config['training_params']['batch_size'],
+        num_image_boxes=config['image_encoder_params']['num_image_boxes'],
     )
 
     val_loader = get_dataloader_img_ocr_precalculated(
@@ -95,6 +96,7 @@ def run_train_loop(config, dir_path = None):
         vocab=vocab,
         shuffle=False,
         batch_size=config['training_params']['batch_size'],
+        num_image_boxes=config['image_encoder_params']['num_image_boxes'],
     )
 
     similarity_measure = config['loss_params']['measure']

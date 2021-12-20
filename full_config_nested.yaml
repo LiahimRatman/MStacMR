@@ -29,6 +29,7 @@ loss_params:
 image_encoder_params:
     image_embedding_dim: 512
     gcn_embedding_dim: 512
+    num_image_boxes: 16
     num_ocr_boxes: 16
     ocr_box_dim: 512
     use_abs: false
@@ -41,7 +42,7 @@ image_encoder_params:
 caption_encoder_params:
     encoder_path: 'checkpoints_and_vocabs/labse_ru_en'
     #encoder_path: 'cointegrated/LaBSE-en-ru'
-    freeze_encoder: false
+    freeze_encoder: true
     output_dim: 512
     max_caption_len: 100
     use_l2norm_final: true

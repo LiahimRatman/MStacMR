@@ -23,6 +23,7 @@ def run_evaluation(config):
         vocab=vocab,
         shuffle=False,
         batch_size=config['training_params']['batch_size'],
+        num_image_boxes=config['image_encoder_params']['num_image_boxes'],
     )
 
     similarity_measure = config['loss_params']['measure']
