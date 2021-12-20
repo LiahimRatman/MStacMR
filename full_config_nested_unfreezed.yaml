@@ -40,7 +40,7 @@ image_encoder_params:
     use_gcn_scene_text_emb: false
     muse_embedder_max_ocr_captions: 256
 caption_encoder_params:
-    encoder_path: 'checkpoints_and_vocabs/labse_ru_en'
+    encoder_path: '../all_data/labse_ru_en'
     #encoder_path: 'cointegrated/LaBSE-en-ru'
     freeze_encoder: false
     output_dim: 512
