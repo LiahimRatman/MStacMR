@@ -20,7 +20,7 @@ training_params:
     num_epochs: 40
     batch_size: 128
     grad_clip: 2.0
-    weight_retrieval_loss: 2.0
+    weight_retrieval_loss: 4.0
     weight_caption_loss: 1.0  
 loss_params:
     margin: 0.2
@@ -42,7 +42,7 @@ image_encoder_params:
 caption_encoder_params:
     encoder_path: 'checkpoints_and_vocabs/labse_ru_en'
     #encoder_path: 'cointegrated/LaBSE-en-ru'
-    freeze_encoder: false
+    freeze_encoder: true
     output_dim: 512
     max_caption_len: 100
     use_l2norm_final: true
