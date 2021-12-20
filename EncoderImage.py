@@ -20,6 +20,7 @@ def EncoderImage(
     use_l2norm = False,
     use_l2norm_final = False,
     use_ocr_emb = True,
+use_gcn_scene_text_emb=False
 ):
     """
     Wrapper for image encoders
@@ -38,6 +39,7 @@ def EncoderImage(
                 use_l2norm = use_l2norm,
                 use_l2norm_final = use_l2norm_final,
                 use_ocr_emb = use_ocr_emb,
+                use_gcn_scene_text_emb = use_gcn_scene_text_emb
             )
         else:
            raise ValueError('should initialize only with ocr features usage') 
@@ -60,6 +62,7 @@ class EncoderImagePrecompAttn(nn.Module):
         use_l2norm = False,
         use_l2norm_final = False,
         use_ocr_emb = True,
+        use_gcn_scene_text_emb= False
     ):
         super(EncoderImagePrecompAttn, self).__init__()
         self.embed_dim = embed_dim
@@ -68,6 +71,7 @@ class EncoderImagePrecompAttn(nn.Module):
         self.use_l2norm = use_l2norm
         self.use_l2norm_final = use_l2norm_final
         self.use_ocr_emb = use_ocr_emb
+        self.use_gcn_scene_text_emb = use_gcn_scene_text_emb
 
         self.fc = nn.Linear(img_dim, embed_dim)
 
@@ -138,21 +142,22 @@ class EncoderImagePrecompAttn(nn.Module):
         if self.use_l2norm:
             fc_scene_text = l2norm(fc_scene_text)
 
-        # Scene Text Reasoning
-        # -> B,D,N
-        GCN_scene_text_emd = fc_scene_text.permute(0, 2, 1)
-        GCN_scene_text_emd = self.Text_GCN_1(GCN_scene_text_emd)
-        GCN_scene_text_emd = self.Text_GCN_2(GCN_scene_text_emd)
-        GCN_scene_text_emd = self.Text_GCN_3(GCN_scene_text_emd)
-        GCN_scene_text_emd = self.Text_GCN_4(GCN_scene_text_emd)
-        # # -> B,N,D
-        GCN_scene_text_emd = GCN_scene_text_emd.permute(0, 2, 1)
-        if self.use_l2norm:
-            GCN_scene_text_emd = l2norm(GCN_scene_text_emd)
-        fc_scene_text = torch.mean(GCN_scene_text_emd, dim=1)
+        if self.use_gcn_scene_text_emb:
+            # Scene Text Reasoning
+            # -> B,D,N
+            GCN_scene_text_emd = fc_scene_text.permute(0, 2, 1)
+            GCN_scene_text_emd = self.Text_GCN_1(GCN_scene_text_emd)
+            GCN_scene_text_emd = self.Text_GCN_2(GCN_scene_text_emd)
+            GCN_scene_text_emd = self.Text_GCN_3(GCN_scene_text_emd)
+            GCN_scene_text_emd = self.Text_GCN_4(GCN_scene_text_emd)
+            # # -> B,N,D
+            GCN_scene_text_emd = GCN_scene_text_emd.permute(0, 2, 1)
+            if self.use_l2norm:
+                GCN_scene_text_emd = l2norm(GCN_scene_text_emd)
+            fc_scene_text = torch.mean(GCN_scene_text_emd, dim=1)
         
         ### this is weird too
-        # fc_scene_text = torch.mean(fc_scene_text, dim=1)
+        fc_scene_text = torch.mean(fc_scene_text, dim=1)
 
         # FINAL AGGREGATION
         if self.use_ocr_emb:

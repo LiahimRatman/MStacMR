@@ -34,6 +34,7 @@ def create_model_from_config(config):
         use_l2norm=config['image_encoder_params']['use_l2norm'],
         use_l2norm_final=config['image_encoder_params']['use_l2norm_final'],
         use_ocr_emb=config['image_encoder_params']['use_ocr_emb'],
+        use_gcn_scene_text_emb = config['image_encoder_params']['use_gcn_scene_text_emb']
     )
 
     text_encoder = EncoderText(
