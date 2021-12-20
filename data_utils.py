@@ -1,8 +1,39 @@
 import nltk
 import numpy as np
 import torch
+import transformers
+from transformers import AutoTokenizer, AutoModel
+from transformers import BatchEncoding
+
+from collections import defaultdict
 
 from utilities import load_from_json
+
+
+def get_tokens_from_encoded_inputs(encoded_input, tokenizer):
+
+    separator = ' '
+    spec_token_ids = set([i for i in [
+        tokenizer.pad_token_id,
+        tokenizer.mask_token_id,
+        tokenizer.bos_token_id, 
+        tokenizer.eos_token_id,
+        tokenizer.cls_token_id,
+        tokenizer.sep_token_id,
+        tokenizer.unk_token_id,
+    ] if i is not None])
+
+    input_ids = encoded_input['input_ids'].cpu().numpy() ### batch x seq_len
+    output = []
+    for seq in input_ids:
+        clear_seq = [id for id in seq if id not in spec_token_ids]
+        tokens = tokenizer.convert_ids_to_tokens(clear_seq)
+        sentence = tokenizer.convert_tokens_to_string(tokens).split(separator)
+        # sentence = tokens
+        output.append(sentence)
+
+    return output
+
 
 
 def prepare_captions(caption, vocab, max_len):
@@ -48,22 +79,26 @@ class FullDataset:
     def __init__(
         self,
         annotation_map_path=None,
-        use_precomputed_embeddings=True,
         image_embeddings_path=None,
         ocr_embeddings_path=None,
+        encoder_tokenizer_path=None,
         vocab=None,
         captions_per_image=5,
         max_ocr_regions=16,
-        max_caption_len=100
+        max_caption_len=100,
+        use_precomputed_embeddings=True,
     ):
         self.annotation_map_path = annotation_map_path
         self.image_embeddings_path = image_embeddings_path
         self.ocr_embeddings_path = ocr_embeddings_path
+        self.encoder_tokenizer_path = encoder_tokenizer_path
         self.use_precomputed_embeddings = use_precomputed_embeddings
         self.captions_per_image = captions_per_image
         self.max_ocr_regions = max_ocr_regions
         self.max_caption_len = max_caption_len
         self.vocab = vocab
+
+        self.encoder_tokenizer = AutoTokenizer.from_pretrained(self.encoder_tokenizer_path)
         
         if self.use_precomputed_embeddings:
             self.precomputed_image_embeddings = np.load(self.image_embeddings_path)
@@ -99,7 +134,16 @@ class FullDataset:
             vocab=self.vocab,
             max_len=self.max_caption_len
         )
-        # print(target, caption_label, caption_mask)
+
+        # tokenizer_outputs = self.encoder_tokenizer(
+        #     caption,
+        #     max_length = self.max_caption_len,
+        #     padding = 'max_length',
+        #     truncation = True,
+        #     return_tensors='pt',
+        # )
+        tokenizer_outputs = caption
+        # print(type(tokenizer_outputs))
 
         if self.use_precomputed_embeddings:
             image_regions_embedding = self.precomputed_image_embeddings[item_id]
@@ -115,12 +159,14 @@ class FullDataset:
             image_path = item['image_path']
 
         return (
+            index, ### full index in dataset - with respect to amount of captions per image
             image_regions_embedding, ### n_bboxes * bb_emb_dim
             ocr_embedding, ### ???? i guess max_ocr_regions * ocr_emb_dim ????
+            # tokenizer_outputs, ### dict with 'input_ids' tensor 1 x max_len, 'token_type_ids', 'attention_mask' of the same size 
+            tokenizer_outputs, ### str
             caption_token_ids, ### init_caption_tokens_ids as tensor
             caption_label, ### same as caption_vocab_indices, but cut or padded to max_len
             caption_mask, ### same as caption_vocab_indices, but cut or padded to max_len
-            index, ### full index in dataset - with respect to amount of captions per image
         )
 
     def __len__(self):
@@ -132,13 +178,29 @@ def precomputed_collate_fn(data):
     
     # sorting list by actual captions length
 
-    CAPTION_INDEX_IN_TUPLE = 2
+    CAPTION_INDEX_IN_TUPLE = 4
 
     data.sort(key=lambda x: len(x[CAPTION_INDEX_IN_TUPLE]), reverse=True)
-    image_embeddings, ocr_embeddings, caption_token_ids, caption_labels, caption_masks, ids = zip(*data)
+    (
+        ids,
+        image_embeddings,
+        ocr_embeddings,
+        tokenizer_outputs,
+        caption_token_ids,
+        caption_labels,
+        caption_masks
+     ) = zip(*data)
 
     image_embeddings = torch.stack(image_embeddings, 0)
     ocr_embeddings = torch.stack(ocr_embeddings, 0)
+    
+    # stacked = defaultdict(list)
+    # [stacked[k].append(v) for d in tokenizer_outputs for k, v in d.items()]
+    # tokenizer_outputs = BatchEncoding({k: torch.cat(v, 0) for k, v in stacked.items()})
+    
+
+    # print(type(tokenizer_outputs))
+
     caption_labels = torch.stack(caption_labels, 0)
     caption_masks = torch.stack(caption_masks, 0)
 
@@ -149,13 +211,14 @@ def precomputed_collate_fn(data):
         end = lengths[i]
         targets[i, :end] = cap[:end]
 
-    return image_embeddings, targets, lengths, ids, caption_labels, caption_masks, ocr_embeddings
+    return ids, image_embeddings, ocr_embeddings, tokenizer_outputs, targets, lengths, caption_labels, caption_masks
 
 
 def get_dataloader_img_ocr_precalculated(
     annotation_map_path,
     image_embeddings_path,
     ocr_embeddings_path,
+    encoder_tokenizer_path,
     vocab,
     shuffle,
     batch_size = 128,
@@ -164,12 +227,13 @@ def get_dataloader_img_ocr_precalculated(
     ):
 
     dataset = FullDataset(
-        use_precomputed_embeddings=True,
         annotation_map_path=annotation_map_path,
         image_embeddings_path=image_embeddings_path,
         ocr_embeddings_path=ocr_embeddings_path,
+        encoder_tokenizer_path=encoder_tokenizer_path,
         vocab=vocab,
         max_caption_len = max_caption_len,
+        use_precomputed_embeddings=True,        
     )
 
     dataloader = torch.utils.data.DataLoader(

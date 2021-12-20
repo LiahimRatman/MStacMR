@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from transformers import BatchEncoding
 
 class VSRN:
     """
@@ -98,30 +99,36 @@ class VSRN:
 
         return loss
 
-    def forward_emb(self, images, captions, lengths, scene_texts):
+    def forward_emb(self, images, ocr_features, tokenizer_outputs, captions, lengths):
         """
         returns
         fusion of image and ocr features
         caption embeddings
         pure image embeddings
         """
-        
-        images = images.to(self.device)
-        captions = captions.to(self.device)
-        scene_texts = scene_texts.to(self.device)
 
-        cap_emb = self.text_encoder(captions, lengths)
-        img_emb, GCN_img_emd = self.image_encoder(images, scene_texts)
+        images = images.to(self.device)
+        ocr_features = ocr_features.to(self.device)
+        # print(type(tokenizer_outputs))
+        # tokenizer_outputs = BatchEncoding(tokenizer_outputs).to(self.device)
+        # tokenizer_outputs = tokenizer_outputs.to(self.device)
+        captions = captions.to(self.device)
+
+        # cap_emb = self.text_encoder(captions, lengths)
+        cap_emb = self.text_encoder(tokenizer_outputs)
+        img_emb, GCN_img_emd = self.image_encoder(images, ocr_features)
 
         return img_emb, cap_emb, GCN_img_emd
 
-    def make_train_step(self, images, captions, lengths, ids, caption_labels, caption_masks, scene_texts):
+    def make_train_step(self, ids, images, ocr_features, tokenizer_outputs, captions, lengths, caption_labels, caption_masks):
         """training step"""
 
-        # compute the embeddings
-        img_emb, cap_emb, GCN_img_emd = self.forward_emb(images, captions, lengths, scene_texts)
+        # print(type(tokenizer_outputs))
 
-        caption_loss = self.calculate_caption_loss(GCN_img_emd, caption_labels, caption_masks)
+        # compute the embeddings
+        img_emb, cap_emb, GCN_img_emb = self.forward_emb(images, ocr_features, tokenizer_outputs, captions, lengths)
+
+        caption_loss = self.calculate_caption_loss(GCN_img_emb, caption_labels, caption_masks)
         # todo Тут бы выяснить, почему одно, а не другое
         # caption_loss = self.calculate_caption_loss(img_emb, caption_labels, caption_masks)
 
@@ -133,7 +140,7 @@ class VSRN:
             self.weight_caption_loss * caption_loss
         )
 
-        # print(f"Loss: {loss}, caption loss: {caption_loss}, retrieval loss: {retrieval_loss}")
+        print(f"Loss: {loss}, caption loss: {caption_loss}, retrieval loss: {retrieval_loss}")
 
         # compute gradient and make optimizer step
         self.optimizer.zero_grad()

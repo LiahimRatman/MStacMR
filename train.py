@@ -1,3 +1,4 @@
+import os
 import pickle
 import time
 
@@ -48,9 +49,12 @@ def train_epoch(
 ):
     n_batches = int(np.ceil(len(train_loader.dataset) / train_loader.batch_size))
 
-    # model.train()
     for i, train_data in tqdm(enumerate(train_loader), total=n_batches):
         model.train()
+
+        # for el in train_data:
+        #     print(type(el))
+
         model.make_train_step(*train_data)
 
         # full evaluation at every n-th batch
@@ -61,8 +65,15 @@ def train_epoch(
     return best_score
 
 
-def run_train_loop(config, dir_path):
+def run_train_loop(config, dir_path = None):
     model = create_model_from_config(config)
+
+    if dir_path is None:
+        dir_path = config['training_params'].get('checkpoints_saving_path', '')
+    if not os.path.exists(dir_path):
+        raise ValueError(f"path for saving checkpoints is not provided or invalid: {dir_path}")
+    else:
+        print(f'will save checkpoint to {dir_path}')
 
     vocab = pickle.load(open(config['training_params']['vocab_path'], 'rb'))
 
@@ -70,6 +81,7 @@ def run_train_loop(config, dir_path):
         annotation_map_path=config['training_params']['train_annot_map_path'],
         image_embeddings_path=config['training_params']['train_img_emb_path'],
         ocr_embeddings_path=config['training_params']['train_ocr_emb_path'],
+        encoder_tokenizer_path=config['caption_encoder_params']['encoder_path'],
         vocab=vocab,
         shuffle=True,
         batch_size=config['training_params']['batch_size'],
@@ -79,6 +91,7 @@ def run_train_loop(config, dir_path):
         annotation_map_path=config['training_params']['eval_annot_map_path'],
         image_embeddings_path=config['training_params']['eval_img_emb_path'],
         ocr_embeddings_path=config['training_params']['eval_ocr_emb_path'],
+        encoder_tokenizer_path=config['caption_encoder_params']['encoder_path'],
         vocab=vocab,
         shuffle=False,
         batch_size=config['training_params']['batch_size'],

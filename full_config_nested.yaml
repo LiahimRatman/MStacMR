@@ -1,4 +1,4 @@
-device: 'cpu'
+device: 'cuda'
 yolov5:
     model_name: '../all_data/checkpoints_and_vocabs/yolo_best.pt'
 clip:
@@ -25,7 +25,7 @@ training_params:
 loss_params:
     margin: 0.2
     measure: 'cosine'
-    max_violation: false  
+    max_violation: false
 image_encoder_params:
     image_embedding_dim: 512
     gcn_embedding_dim: 512
@@ -34,14 +34,20 @@ image_encoder_params:
     use_abs: false
     use_bn: false
     use_l2norm: false
-    use_l2norm_final: false
+    use_l2norm_final: true
     use_ocr_emb: true
     use_gcn_scene_text_emb: false
     muse_embedder_max_ocr_captions: 256
 caption_encoder_params:
-    caption_encoder_num_layers: 1
-    caption_encoder_word_dim: 300  # caption embedding size
-    caption_encoder_embedding_dim: 512
+    encoder_path: 'checkpoints_and_vocabs/labse_ru_en'
+    #encoder_path: 'cointegrated/LaBSE-en-ru'
+    freeze_encoder: false
+    output_dim: 512
+    max_caption_len: 100
+    use_l2norm_final: true
+#    caption_encoder_num_layers: 1
+#    caption_encoder_word_dim: 300  # caption embedding size
+#    caption_encoder_embedding_dim: 512
 caption_generator_params:
     dim_vid: 512  # было 2048, подозреваю, что это много
     dim_caption_generation_hidden: 512  # мб теперь надо поменять

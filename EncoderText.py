@@ -1,10 +1,69 @@
+import os
+from pathlib import Path
+
 import torch
 import torch.nn as nn
-import torch.nn.init
+# import torch.nn.init
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+from transformers import AutoModel, AutoTokenizer
+
 from train_utils import l2norm
+
+# class LABSETextEncoder(transformers.models.bert.modeling_bert.BertModel):
+class TextEncoder(nn.Module):
+    def __init__(
+        self,
+        encoder_path: str,
+        freeze_encoder = True,
+        output_dim = 512,
+        max_caption_len = 100,
+        use_l2norm_final = True,
+        *args, **kwargs,
+    ):
+        super(TextEncoder, self).__init__()
+        # self.encoder_path = Path(os.path.abspath(encoder_path.rstrip('/')))
+        self.encoder_path = encoder_path
+        # print(self.encoder_path)
+        self.encoder = AutoModel.from_pretrained(self.encoder_path)
+        self.encoder_tokenizer = AutoTokenizer.from_pretrained(self.encoder_path)
+        self.max_caption_len = max_caption_len
+        self.use_l2norm_final = use_l2norm_final
+
+        if freeze_encoder:
+            for param in self.encoder.parameters():
+                param.requires_grad = False
+
+        self.fc = nn.Linear(
+            self.encoder.config.to_dict()['pooler_fc_size'],
+            output_dim,
+        )
+        self.activation = nn.ReLU()
+    
+    def forward(self, encoder_input):
+        """
+        `encoded_input` should be something that comes after calling something like
+        tokenizer(sentences, padding=True, truncation=True, max_length=64, return_tensors='pt')
+        """
+
+        encoder_input = self.encoder_tokenizer(
+            encoder_input, ### list of strings
+            max_length = self.max_caption_len,
+            padding = True,#'max_length',
+            truncation = True,
+            return_tensors='pt',
+        ).to(self.encoder.device)
+
+        encoder_output = self.encoder(**encoder_input) ### lots of stuff
+        embeddings = encoder_output.pooler_output ### batch_size x hid_dim
+        embeddings = self.fc(embeddings) ### batch_size x hid_dim
+        embeddings = self.activation(embeddings)
+
+        if self.use_l2norm_final:
+            embeddings = l2norm(embeddings)
+
+        return embeddings
 
 
 # RNN Based Language Model
