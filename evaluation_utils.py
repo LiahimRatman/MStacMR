@@ -52,6 +52,8 @@ def encode_data(model, dataloader):
 def evaluate(model, dataloader, similarity_measure='cosine', captions_per_image=5):
     # compute the encoding for all the validation images and captions
     img_embs, cap_embs = encode_data(model, dataloader,)
+    # np.save("img_emb.npy", img_embs[::5, ...])
+    # np.save("cap_embs.npy", cap_embs)
 
     # caption retrieval
     eval_res_i2t, ranks_i2t = get_i2t_retrieval_scores(

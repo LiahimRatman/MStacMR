@@ -7,15 +7,19 @@ import nltk
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-import torch
 import streamlit as st
+import tensorflow_hub as tf_hub
+import torch
 
 from Vocabulary import Vocabulary
+from ocr.ocr_pipeline import get_sentences_from_images
 from utilities import get_config, load_from_json
 from model import create_model_from_config
 
 from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
+from ocr.ocr_recognition import Pipeline, Recognizer
+from ocr.ocr_embedder import OCREmbedder
 from yolov5.models.common import DetectMultiBackend
 
 
@@ -32,8 +36,13 @@ def image_load(img_path):
     return img
 
 
-def inference_ocr(region_embeddings):  # todo Сделать OCR
-    return np.zeros_like(region_embeddings)[:16, :300]
+def inference_ocr(image_path: str, storage: Dict):
+    ocr_pipeline = storage['ocr']['model']
+    muse_embedder = storage['muse']['model']
+    sentences = get_sentences_from_images(ocr_pipeline, [image_path], device='cpu')
+    sentences = [" ".join(tokens) for tokens in sentences]
+    emb_matrix = muse_embedder.get_embeddings_for_gcn(sentences)
+    return emb_matrix
 
 
 def find_nearest_images(caption_embedding, number_of_neighbors: int, space) -> List[str]:
@@ -98,7 +107,7 @@ def inference_on_image(image_path, storage, save_emb=False, return_no_ocr_embedd
             stacked_image_features.append(torch.zeros(CLIP_EMBEDDING_SIZE))
     region_embeddings = np.stack([item.cpu() for item in stacked_image_features], axis=0)
 
-    ocr_embeddings = inference_ocr(region_embeddings)  # Тут должен быть массив размера 16 * 300
+    ocr_embeddings = inference_ocr(image_path, storage)  # [ocr regions(=1) x 512]
 
     region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
     ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
@@ -232,6 +241,18 @@ def instantiate():
     vsrn_model.eval()
     storage['vsrn']['model'] = vsrn_model
     storage['vsrn']['vocab'] = vocab
+
+    # 'keras-ocr'
+    os.environ["KERAS_OCR_CASHE_DIR"] = config["ocr"]["root_pretrained_models"]
+    storage['ocr'] = {}
+    ocr_model = Pipeline(recognizer=Recognizer())
+    storage['ocr']['model'] = ocr_model
+
+    # 'muse'
+    storage['muse'] = {}
+    embedder = tf_hub.load(config['muse']['muse_path'])
+    muse_embedder = OCREmbedder(embedder, max_ocr_captions=config['muse']['muse_embedder_max_ocr_captions'])
+    storage['muse']['model'] = muse_embedder
 
     print('all models initialized')
 
