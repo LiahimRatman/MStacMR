@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import pickle
 import torch
 import streamlit as st
-import embeddinghub as eh
 
 from Vocabulary import Vocabulary
 from utilities import get_config, load_from_json
@@ -202,15 +201,6 @@ st.title('Multimodal Search Demo')
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, show_spinner=False)
 def instantiate():
     storage = {}
-
-    hub = eh.connect(eh.Config(host="0.0.0.0", port=7462))
-    # image_space = hub.get_space("ctc_image_embs5")
-    # caption_space = hub.get_space("ctc_caption_embs5")
-
-    storage['hub'] = {}
-    storage['hub']['hub'] = hub
-    # storage['hub']['image_space'] = image_space
-    # storage['hub']['caption_space'] = caption_space
 
     ctc_map = load_from_json('checkpoints_and_vocabs/CTC_image_name_mapa_new.json')
     names = load_from_json('checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json')
