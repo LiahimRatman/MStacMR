@@ -38,20 +38,20 @@ def create_model_from_config(config):
         use_gcn_scene_text_emb=config['image_encoder_params']['use_gcn_scene_text_emb']
     )
 
-    # text_encoder = EncoderText(
-    #     vocab_size=len(vocab),
-    #     word_dim=config['caption_encoder_params']['caption_encoder_word_dim'],
-    #     embed_size=config['caption_encoder_params']['caption_encoder_embedding_dim'],
-    #     num_layers=config['caption_encoder_params']['caption_encoder_num_layers'],
-    #     device=device,
-    # )
-
-    text_encoder = TextEncoder(
-        encoder_path=config['caption_encoder_params']['encoder_path'],
-        output_dim=config['caption_encoder_params']['output_dim'],
-        max_caption_len=config['caption_encoder_params']['max_caption_len'],
-        use_l2norm_final=config['caption_encoder_params']['use_l2norm_final'],
+    text_encoder = EncoderText(
+        vocab_size=len(vocab),
+        word_dim=config['caption_encoder_params']['caption_encoder_word_dim'],
+        embed_size=config['caption_encoder_params']['caption_encoder_embedding_dim'],
+        num_layers=config['caption_encoder_params']['caption_encoder_num_layers'],
+        device=device,
     )
+
+    # text_encoder = TextEncoder(
+    #     encoder_path=config['caption_encoder_params']['encoder_path'],
+    #     output_dim=config['caption_encoder_params']['output_dim'],
+    #     max_caption_len=config['caption_encoder_params']['max_caption_len'],
+    #     use_l2norm_final=config['caption_encoder_params']['use_l2norm_final'],
+    # )
 
     caption_model = S2VTAttModel(
         EncoderRNN(

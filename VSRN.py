@@ -114,8 +114,8 @@ class VSRN:
         # tokenizer_outputs = tokenizer_outputs.to(self.device)
         captions = captions.to(self.device)
 
-        # cap_emb = self.text_encoder(captions, lengths)
-        cap_emb = self.text_encoder(tokenizer_outputs)
+        cap_emb = self.text_encoder(captions, lengths)
+        # cap_emb = self.text_encoder(tokenizer_outputs)
         img_emb, GCN_img_emd = self.image_encoder(images, ocr_features)
 
         return img_emb, cap_emb, GCN_img_emd
