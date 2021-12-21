@@ -17,13 +17,13 @@ from model import create_model_from_config
 
 from inference_yolov5 import inference_yolo_on_one_image
 from inference_clip import inference_clip_one_image
-from models.common import DetectMultiBackend
+from yolov5.models.common import DetectMultiBackend
 
-### DETECTION | EMBEDDING PARAMS
+
 MAX_DETECTIONS_PER_IMAGE = 36
 CLIP_EMBEDDING_SIZE = 512
 
-### PATHS
+
 TEMP_DIR = './tmpdir/'
 CONFIG_PATH = 'inference_config_nested.yaml'
 
@@ -302,12 +302,12 @@ def main():
         min_value=1, max_value=10, value=5, step=1
     )
 
-    ### input processing part
+    # input processing part
     if IMAGE2TEXT:
-        ### trying to load image
+        # trying to load image
         is_loaded = False
         img_uploaded = image_uploader_slot.file_uploader(label='Upload your image in .jpg format', type=['jpg', 'jpeg'])
-        ### img_uploaded is an object, .read() on which returns bytes
+        # img_uploaded is an object, .read() on which returns bytes
 
         if img_uploaded:
             img = load_image(img_uploaded)
@@ -336,7 +336,7 @@ def main():
     warning_slot = st.sidebar.empty()
     authors_slot = st.sidebar.empty()
 
-    ### fetching part
+    # fetching part
     if IMAGE2TEXT:
         CAPTION_CREATION = retrieval_slot.radio(
             "Retrieve caption from existing or generate from scratch?",

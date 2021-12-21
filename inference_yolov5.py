@@ -1,8 +1,7 @@
 import torch
 
-from models.common import DetectMultiBackend
-from utils.datasets import LoadImages
-from utils.general import check_img_size, non_max_suppression, xyxy2xywh, scale_coords
+from yolov5.utils.datasets import LoadImages
+from yolov5.utils.general import check_img_size, non_max_suppression, xyxy2xywh, scale_coords
 
 DEVICE = torch.device("cpu")
 IMAGE_SIZE = 416
