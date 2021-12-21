@@ -11,10 +11,10 @@ from ocr.ocr_recognition import Pipeline, Recognizer
 from utilities import get_config, load_from_json
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config_path", default='full_config_nested.yaml', help="yaml config path")
+parser.add_argument("--config_path", default='config/full_config_nested.yaml', help="yaml config path")
 parser.add_argument("--save_path", default='../data/precomputed_embeddings/', help="path to save predictions")
 
-MODEL_CONFIG_PATH = 'full_config_nested.yaml'
+MODEL_CONFIG_PATH = 'config/full_config_nested.yaml'
 
 
 def generate_embeddings(config):

@@ -25,7 +25,7 @@ CLIP_EMBEDDING_SIZE = 512
 
 ### PATHS
 TEMP_DIR = './tmpdir/'
-CONFIG_PATH = 'inference_config_nested.yaml'
+CONFIG_PATH = 'config/full_config_nested.yaml'
 
 
 def image_load(img_path):

@@ -17,8 +17,8 @@ from Vocabulary import Vocabulary
 
 from model import create_model_from_config
 
-INFERENCE_CONFIG_PATH = 'inference_config_nested.yaml'
-MODEL_CONFIG_PATH = 'full_config_nested.yaml'
+INFERENCE_CONFIG_PATH = 'config/full_config_nested.yaml'
+MODEL_CONFIG_PATH = 'config/full_config_nested.yaml'
 CHECKPOINTS_DIR_PATH = 'checkpoints/'
 
 
