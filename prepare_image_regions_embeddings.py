@@ -1,8 +1,10 @@
+import argparse
+
 import clip
 import numpy as np
 import torch
 
-from dao import load_from_json
+from utilities import load_from_json
 from detect_datasets_regions_with_yolov5 import detect_image_regions_on_train_datasets
 from inference_clip import inference_clip_one_image
 
@@ -13,22 +15,20 @@ CLIP_EMBEDDING_SIZE = 512
 
 def get_datasets_embeddings(model_clip,
                             preprocess_clip,
-                            annotations_map='checkpoints_and_vocabs/full_dataset_train_mapa_good.json',
+                            annotations_map='../checkpoints_and_vocabs/full_dataset_train_mapa_good.json',
                             save_emb=True,
-                            save_path='precomputed_embeddings/train_embeddings_yolov5_clip.npy'):
-    detect_image_regions_on_train_datasets()
-
+                            save_path='../precomputed_embeddings/train_embeddings_yolov5_clip.npy'):
     dataset_map = load_from_json(annotations_map)
     full_dataset_image_embeddings = []
     for item in dataset_map:
         dataset_name = item['image_path'].split('/')[0]
-        image_features = inference_clip_one_image(image_path='STACMR_train/' + item['image_path'],
+        image_features = inference_clip_one_image(image_path='../STACMR_train/' + item['image_path'],
                                                   crop_labels=None,
                                                   model=model_clip,
                                                   preprocess=preprocess_clip,
                                                   device=torch.device("cpu"),
                                                   from_txt=True,
-                                                  labels_path='STACMR_train/' + dataset_name + '/detections/labels/')
+                                                  labels_path='../STACMR_train/' + dataset_name + '/detections/labels/')
 
         stacked_image_features = []
         for _ in range(MAX_DETECTIONS_PER_IMAGE):
@@ -44,8 +44,28 @@ def get_datasets_embeddings(model_clip,
     return np.stack([item for item in full_dataset_image_embeddings], axis=0)
 
 
-if __name__ == "__main__":
-    # todo Сюда можно вставить argparse
+def get_train_embs():
     model, preprocess = clip.load("ViT-B/32")
+    # Получаем регионы координаты объектов из yolov5
+    # detect_image_regions_on_train_datasets()
     get_datasets_embeddings(model_clip=model,
                             preprocess_clip=preprocess)
+
+
+def get_eval_embs():
+    model, preprocess = clip.load("ViT-B/32")
+    get_datasets_embeddings(model_clip=model,
+                            preprocess_clip=preprocess,
+                            annotations_map='../checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json',
+                            save_emb=True,
+                            save_path='../precomputed_embeddings/test_embeddings_yolov5_clip.npy')
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--train', type=bool, default=True, help='get train embeddings')
+    args = parser.parse_args()
+    if args.train:
+        get_train_embs()
+    else:
+        get_eval_embs()

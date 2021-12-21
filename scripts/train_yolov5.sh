@@ -1,0 +1,2 @@
+cd yolov5
+python train.py --img 416 --batch 64 --epochs 50 --data ../YOLOv5_train/VG_dataset.yaml --weights ../checkpoints_and_vocabs/yolov5l.pt --cache --freeze 10 --project ../YOLOv5_train --name YOLOv5_model
