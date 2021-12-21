@@ -4,7 +4,7 @@ yolov5:
 clip:
     model_name: 'ViT-B/32'
 use_checkpoint: false
-checkpoint_path: '../all_data/checkpoints/best_model.pth'
+checkpoint_path: 'checkpoints/best_model.pth'
 training_params:
     train_annot_map_path: '../all_data/checkpoints_and_vocabs/full_dataset_train_mapa_good.json'
     train_img_emb_path: '../all_data/precomputed_embeddings/final_all_train_emb_CLIP_new1.npy'
@@ -13,7 +13,7 @@ training_params:
     eval_img_emb_path: '../all_data/precomputed_embeddings/final_all_test_emb_CLIP_new1.npy'
     eval_ocr_emb_path: '../all_data/precomputed_embeddings/final_all_test_CTC_ocr_muse_emb_11.npy'
     vocab_path: '../all_data/checkpoints_and_vocabs/f30k_precomp_vocab.pkl'
-    muse_path: '../all_data/labse_ru_en'
+    muse_path: '../all_data/muse'
     raw_images_path: '../STACMR_train'
     learning_rate: 0.0002
     lr_update: 15
@@ -35,7 +35,7 @@ image_encoder_params:
     use_abs: false
     use_bn: false
     use_l2norm: false
-    use_l2norm_final: false
+    use_l2norm_final: true
     use_ocr_emb: true
     use_gcn_scene_text_emb: false
     muse_embedder_max_ocr_captions: 256
@@ -45,7 +45,7 @@ caption_encoder_params:
     freeze_encoder: true
     output_dim: 512
     max_caption_len: 100
-    use_l2norm_final: false
+    use_l2norm_final: true
 #    caption_encoder_num_layers: 1
 #    caption_encoder_word_dim: 300  # caption embedding size
 #    caption_encoder_embedding_dim: 512
