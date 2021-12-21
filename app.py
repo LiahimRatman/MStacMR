@@ -200,21 +200,20 @@ st.title('Multimodal Search Demo')
 
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, show_spinner=False)
 def instantiate():
+    config = get_config(CONFIG_PATH)
+
+    device = config.get('device', 'cpu')
+    vocab = pickle.load(open(config['training_params']['vocab_path'], 'rb'))
+    names = load_from_json(config['training_params']['eval_annot_map_path'])
+    ctc_map = load_from_json(config["app_params"]["image_map"])
+    image_embeddings = np.load((config["app_params"]["image_embeddings"]))
+    caption_embeddings = np.load((config["app_params"]["caption_embeddings"]))
+
     storage = {}
-
-    ctc_map = load_from_json('checkpoints_and_vocabs/CTC_image_name_mapa_new.json')
-    names = load_from_json('checkpoints_and_vocabs/full_dataset_CTC_test_mapa_good.json')
-    image_embeddings = np.load('checkpoints_and_vocabs/embedded_images.npy')
-    caption_embeddings = np.load('checkpoints_and_vocabs/embedded_captions.npy')
-
     storage['ctc_map'] = ctc_map
     storage['names'] = names
     storage['caption_embeddings'] = caption_embeddings
     storage['image_embeddings'] = image_embeddings
-
-    config = get_config(CONFIG_PATH)
-    device = config.get('device', 'cpu')
-    vocab = pickle.load(open(config['training_params']['vocab_path'], 'rb'))
 
     # 'clip'    
     storage['clip'] = {}
