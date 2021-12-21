@@ -47,7 +47,7 @@ def get_datasets_embeddings(model_clip,
 def get_train_embs():
     model, preprocess = clip.load("ViT-B/32")
     # Получаем регионы координаты объектов из yolov5
-    # detect_image_regions_on_train_datasets()
+    detect_image_regions_on_train_datasets()
     get_datasets_embeddings(model_clip=model,
                             preprocess_clip=preprocess)
 
