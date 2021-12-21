@@ -21,7 +21,11 @@ training_params:
     batch_size: 128
     grad_clip: 2.0
     weight_retrieval_loss: 2.0
-    weight_caption_loss: 1.0  
+    weight_caption_loss: 1.0
+app_params:
+    image_map: '../all_data/checkpoints_and_vocabs/CTC_image_name_mapa_new.json'
+    image_embeddings: '../all_data/checkpoints_and_vocabs/embedded_images.npy'
+    caption_embeddings: '../all_data/checkpoints_and_vocabs/embedded_captions.npy'
 loss_params:
     margin: 0.2
     measure: 'cosine'
