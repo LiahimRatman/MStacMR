@@ -3,6 +3,7 @@ import urllib
 from pathlib import Path
 from typing import List, Dict, Union
 import clip
+from loguru import logger
 import nltk
 import numpy as np
 import matplotlib.pyplot as plt
@@ -209,6 +210,7 @@ st.title('Multimodal Search Demo')
 
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, show_spinner=False)
 def instantiate():
+    logger.info("Start instantiate all models")
     config = get_config(CONFIG_PATH)
 
     device = config.get('device', 'cpu')
@@ -250,11 +252,13 @@ def instantiate():
 
     # 'muse'
     storage['muse'] = {}
-    embedder = tf_hub.load(config['muse']['muse_path'])
+    muse_path = config['muse']['muse_path']
+    logger.debug(f"Muse path: {muse_path}")
+    embedder = tf_hub.load(muse_path)
     muse_embedder = OCREmbedder(embedder, max_ocr_captions=config['muse']['muse_embedder_max_ocr_captions'])
     storage['muse']['model'] = muse_embedder
 
-    print('all models initialized')
+    logger.info('All models initialized')
 
     return storage
 
@@ -266,7 +270,7 @@ def save_image(img, path='saved_image.jpg'):
     img_bytes = img.read()
     with open(img_path, 'wb') as f:
         f.write(img_bytes)
-    print(f'saving image to {img_path}')
+    logger.info(f'saving image to {img_path}')
 
     return img_path
 
