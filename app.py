@@ -300,7 +300,8 @@ def main():
 
         if img_uploaded:
             img = load_image(img_uploaded)
-            img_path = save_image(img_uploaded)
+            # img_path = save_image(img_uploaded)
+            img_path = TEMP_DIR + 'uploaded_image.jpg'
             is_loaded = True
             image_slot.image(img, use_column_width=False, width=500)
             if new_image:
