@@ -13,7 +13,6 @@ training_params:
     eval_img_emb_path: '../all_data/precomputed_embeddings/final_all_test_emb_CLIP_new1.npy'
     eval_ocr_emb_path: '../all_data/precomputed_embeddings/final_all_test_CTC_ocr_muse_emb_11.npy'
     vocab_path: '../all_data/checkpoints_and_vocabs/f30k_precomp_vocab.pkl'
-    muse_path: '../all_data/muse'
     raw_images_path: '../STACMR_train'
     learning_rate: 0.0002
     lr_update: 15
@@ -24,8 +23,8 @@ training_params:
     weight_caption_loss: 1.0
 app_params:
     image_map: '../all_data/checkpoints_and_vocabs/CTC_image_name_mapa_new.json'
-    image_embeddings: '../all_data/checkpoints_and_vocabs/embedded_images.npy'
-    caption_embeddings: '../all_data/checkpoints_and_vocabs/embedded_captions.npy'
+    image_embeddings: '../all_data/checkpoints_and_vocabs/embedded_images_ocr.npy'
+    caption_embeddings: '../all_data/checkpoints_and_vocabs/embedded_captions_ocr.npy'
 loss_params:
     margin: 0.2
     measure: 'cosine'
@@ -42,7 +41,6 @@ image_encoder_params:
     use_l2norm_final: false
     use_ocr_emb: true
     use_gcn_scene_text_emb: false
-    muse_embedder_max_ocr_captions: 256
 caption_encoder_params:
     encoder_path: '../all_data/labse_ru_en'
     #encoder_path: 'cointegrated/LaBSE-en-ru'
@@ -66,3 +64,10 @@ caption_generator_params:
     bidirectional_dec: false
     max_caption_len: 60
     dim_word_caption_generation: 300  # output of encoder decoder embedding size
+ocr:
+    root_pretrained_models: '../all_data/keras-ocr'
+muse:
+    muse_path: '../all_data/muse'
+    muse_embedder_max_ocr_captions: 256
+
+
