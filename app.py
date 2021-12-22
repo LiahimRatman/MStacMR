@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import streamlit as st
+import tensorflow_text # DON'T DELETE IT! (bug in tf)
 import tensorflow_hub as tf_hub
 import torch
 
@@ -111,7 +112,7 @@ def inference_on_image(image_path, storage, save_emb=False, return_no_ocr_embedd
     ocr_embeddings = inference_ocr(image_path, storage)  # [ocr regions(=1) x 512]
 
     region_embeddings = torch.tensor(region_embeddings).unsqueeze(0)
-    ocr_embeddings = torch.tensor(ocr_embeddings).unsqueeze(0)
+    ocr_embeddings = torch.tensor(ocr_embeddings).float().unsqueeze(0)
     if torch.cuda.is_available():
         region_embeddings = region_embeddings.cuda()
         ocr_embeddings = ocr_embeddings.cuda()
@@ -253,7 +254,6 @@ def instantiate():
     # 'muse'
     storage['muse'] = {}
     muse_path = config['muse']['muse_path']
-    logger.debug(f"Muse path: {muse_path}")
     embedder = tf_hub.load(muse_path)
     muse_embedder = OCREmbedder(embedder, max_ocr_captions=config['muse']['muse_embedder_max_ocr_captions'])
     storage['muse']['model'] = muse_embedder
