@@ -1,6 +1,6 @@
 # MStacMR
 
-![alt text](https://github.com/LiahimRatman/MStacMR/blob/master/new_diag2-new_arcitecture.jpg?raw=true)
+![alt text](https://github.com/LiahimRatman/MStacMR/blob/master/final_new_arcitecture.jpg?raw=true)
 
 Model architecture is a modification of [StacMR project](https://github.com/AndresPMD/StacMR) with additions:
 * custom image encoders
