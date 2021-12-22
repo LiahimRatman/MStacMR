@@ -3,7 +3,7 @@ yolov5:
     model_name: '../all_data/checkpoints_and_vocabs/yolo_best.pt'
 clip:
     model_name: 'ViT-B/32'
-use_checkpoint: false
+use_checkpoint: true
 checkpoint_path: 'checkpoints/best_model.pth'
 training_params:
     train_annot_map_path: '../all_data/checkpoints_and_vocabs/full_dataset_train_mapa_good.json'
