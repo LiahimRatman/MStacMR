@@ -49,10 +49,13 @@ Data
 ----------
 You can find needed data through this links:
 VG dataset for YOLOv5 training: https://drive.google.com/file/d/1Hm2MrGPODp5LKE0SADVXY43jLTDexa2w/view?usp=sharing
+
 MStacMR full train + eval dataset: https://drive.google.com/file/d/1k-2Piyke_d-u3PycnRgSnLHBQFFajosL/view?usp=sharing
+
 Precomputed image embeddings: 
  - train: https://drive.google.com/file/d/1QzMoXyUZ-Cfbbx_UXiIQ_AixphdEQ7Dh/view?usp=sharing
  - CTC5k test: https://drive.google.com/file/d/1-Fpk3J0MGfrBXSyqoxFaar7TuNZi-o-4/view?usp=sharing
+
 OCR embeddings: TBD
 All json maps needed: TBD
 
