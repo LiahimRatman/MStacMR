@@ -44,3 +44,27 @@ Project Organization
 
 
 --------
+
+To train MStacMR model you need to make image and OCR embeddings first (model was trained separately):
+
+To train your YOLOv5 model run:
+```bash
+scripts/train_yolov5.sh
+```
+
+To generate image embeddings with YOLOv5 + CLIP image encoder run:
+```bash
+scripts/get_img_embeddings.sh
+```
+
+To generate OCR embeddings with Keras-OCR + MUSE run:
+```python
+ocr/generate_ocr_embeddings.py
+```
+
+Then you can train the whole MStacMR model:
+```python
+train.py
+```
+
+You can manage train parameters through config in configs directory
